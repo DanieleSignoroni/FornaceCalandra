@@ -5,15 +5,18 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletException;
 
 import com.thera.thermfw.ad.ClassADCollection;
 import com.thera.thermfw.base.Trace;
+import com.thera.thermfw.collector.BODataCollector;
 import com.thera.thermfw.common.ErrorMessage;
 import com.thera.thermfw.persist.Factory;
 import com.thera.thermfw.persist.KeyHelper;
 import com.thera.thermfw.web.ServletEnvironment;
+import com.thera.thermfw.web.WebForm;
 
 import it.softre.thip.vendite.uds.YAlertUtilsVendite;
 import it.softre.thip.vendite.uds.YUdsVendita;
@@ -21,8 +24,28 @@ import it.thera.thip.base.comuniVenAcq.web.EvasioneOrdiniConst;
 import it.thera.thip.base.documenti.web.DocumentoCambiaJSP;
 import it.thera.thip.base.documenti.web.DocumentoDataCollector;
 import it.thera.thip.base.documenti.web.DocumentoDatiSessione;
+import it.thera.thip.base.documenti.web.DocumentoGridActionAdapter;
+import it.thera.thip.base.documenti.web.DocumentoNavigazioneWeb;
+import it.thera.thip.cs.ThipException;
+import it.thera.thip.vendite.ordineVE.web.DocEvaVenNavigazioneWeb;
 
-public class YEvasioneUdsVendita extends DocumentoCambiaJSP {
+/**
+ * <p></p>
+ *
+ * <p>
+ * Company: Softre Solutions<br>
+ * Author: Daniele Signoroni<br>
+ * Date: 12/05/2025
+ * </p>
+ */
+
+/*
+ * Revisions:
+ * Number   Date        Owner    Description
+ * 71XXX    12/05/2025  DSSOF3   Prima stesura
+ */
+
+public class YEvasioneUdsVendita extends DocumentoCambiaJSP implements EvasioneOrdiniConst {
 
 	private static final long serialVersionUID = 1L;
 
@@ -39,9 +62,94 @@ public class YEvasioneUdsVendita extends DocumentoCambiaJSP {
 			evadiUds(se,cadc,docBODC,datiSessione);
 		}else if(azione.equals(CONFERMA_EVASIONE)) {
 			confermaEvasione(se,cadc,docBODC,datiSessione);
+		}else if(azione.equals(AZIONE_EVADI_DOCUMENTO)) {
+			evadiDocumentoGriglia(se,cadc,docBODC,datiSessione);
 		}else {
 			super.eseguiAzioneSpecifica(se, cadc, docBODC, datiSessione);
 		}
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	protected void evadiDocumentoGriglia(ServletEnvironment se, ClassADCollection cadc, DocumentoDataCollector docBODC,
+			DocumentoDatiSessione datiSessione) throws ServletException, IOException, SQLException {
+		boolean erroriPresenti = false;
+		List errors = new ArrayList();
+		String action = super.getAzione(se);
+		it.softre.thip.vendite.uds.YEvasioneUdsVendita docInUso = (it.softre.thip.vendite.uds.YEvasioneUdsVendita) ( (YDatiSessioneEvasioneUdsVendita) datiSessione).getBo();
+		//docBODC = (DocumentoDataCollector) Factory.createObject(DocumentoDataCollector.class);
+		docBODC.initialize("YEvasioneUdsVendita", true, getCurrentLockType(se));
+		docBODC.setBo(docInUso);
+		List righeSel = YGestoreEvasioneUdsVendita.get().getRigheSelezionate(se);
+		try {
+			docInUso.aggiornaRigheDocumento(righeSel);
+		} catch (ThipException e) {
+			e.printStackTrace(Trace.excStream);
+		}
+		docInUso.setGeneraDocumento(true);
+		if (docBODC.save(true) != BODataCollector.OK) {
+			errors.addAll(docBODC.getErrorList().getErrors());
+			erroriPresenti = true;
+		}
+		se.addErrorMessages(errors);
+		se.getRequest().setAttribute(CHIAVE_DOC_SALVATO, docBODC.getBo().getKey());
+		closeAction(docBODC, se);
+		se.getRequest().setAttribute(ERRORI_PRESENTI, new Boolean(erroriPresenti));
+		se.getRequest().setAttribute(AZIONE_RICHIESTA, getAzioneDopoCambio(se, erroriPresenti));
+		se.getRequest().setAttribute(DocumentoDatiSessione.CHIAVE_DATI_SESSIONE, datiSessione.getChiaveDatiSessione());
+		String url = null;
+		boolean isInclude = false;
+		String dispatcher = DocEvaVenNavigazioneWeb.cJspDispatcherEstrazione;
+		String newUrl = DocEvaVenNavigazioneWeb.cJspGestoreGriglia;
+		String params = "?" + DocumentoDatiSessione.CHIAVE_DATI_SESSIONE + "=" +
+				(String) se.getRequest().getAttribute(DocumentoDatiSessione.CHIAVE_DATI_SESSIONE);
+		if (docInUso.isOnDB()) {
+			params += "&Mode=" + WebForm.UPDATE + "&Key=" + docInUso.getKey();
+		}
+		if (erroriPresenti) {
+			String errorHandler = DocEvaVenNavigazioneWeb.cJspErrorListHandler;
+			String parAdd = "&" + DocumentoGridActionAdapter.NON_PASSA_DA_NUOVO + "=true";
+			se.getRequest().setAttribute(DocumentoCambiaJSP.PARAMETRI_ADDIZIONALI, parAdd);
+			params = "thClassName" + "=" + "YEvasioneUdsVendita";
+			errorHandler += "?" + params;
+			url = errorHandler;
+		}
+		else {
+			newUrl = DocEvaVenNavigazioneWeb.cJspGestoreGriglia;
+			newUrl += params;
+			params = "thNewUrl=" + URLEncoder.encode(newUrl,"UTF-8");
+			if (action.equals(EvasioneOrdiniConst.AZIONE_CONFERMA_CHIUDI_GRIGLIA) ||
+					action.equals(EvasioneOrdiniConst.AZIONE_EVADI_DOCUMENTO)) {
+				String initialActionAdapter = Factory.getName("it.thera.thip.vendite.documentoVE.web.DocumentoVenditaGridActionAdapter",Factory.CLASS);
+
+				String className = "DocumentoVendita";
+				String key = docInUso.getKey();
+				String servletPath = se.getServletPath();
+				if (servletPath.startsWith("/")) {
+					servletPath = servletPath.substring(1);
+				}
+				if (servletPath.endsWith("/")) {
+					servletPath = servletPath.substring(0, servletPath.length() - 1);
+				}
+				String thAction = DocumentoGridActionAdapter.UPDATE_RIGHE;
+				String urlEstrattoDoc = servletPath + "/" + initialActionAdapter +
+						"?thAction=" + thAction +
+						"&thClassName=" + className +
+						"&ObjectKey=" + URLEncoder.encode(key,"UTF-8") +
+						"&" + DocumentoNavigazioneWeb.TIPO_FORM + "=" +
+						DocumentoNavigazioneWeb.TF_DETTAGLI +
+						"&" + DocumentoNavigazioneWeb.MODO_FORM + "=" +
+						DocumentoNavigazioneWeb.MF_COMPLETA;
+				params = "thNewUrl=" + java.net.URLEncoder.encode(newUrl,"UTF-8") +
+						"&thCloseParent=" + java.net.URLEncoder.encode(urlEstrattoDoc,"UTF-8");
+				String ritornoDaRiga = getStringParameter(se.getRequest(),"ritornoDaRiga");
+				if (ritornoDaRiga != null && ritornoDaRiga.equalsIgnoreCase("true")) {
+					params += "&ritornoDaRiga=" + ritornoDaRiga;
+				}
+			}
+			params += "&thAction=" + action;
+			url = dispatcher + "?" + params;
+		}
+		se.sendRequest(getServletContext(), url, isInclude);
 	}
 
 	private void evadiUds(ServletEnvironment se, ClassADCollection cadc, DocumentoDataCollector docBODC, DocumentoDatiSessione datiSessione) throws ServletException, IOException {

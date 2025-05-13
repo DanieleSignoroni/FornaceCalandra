@@ -7,6 +7,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -14,19 +15,17 @@ import java.util.Map;
 import java.util.Vector;
 
 import com.thera.thermfw.base.Trace;
+import com.thera.thermfw.collector.BODataCollector;
 import com.thera.thermfw.common.BaseComponentsCollection;
-import com.thera.thermfw.common.BusinessObject;
-import com.thera.thermfw.common.ErrorList;
 import com.thera.thermfw.common.ErrorMessage;
 import com.thera.thermfw.persist.ConnectionManager;
-import com.thera.thermfw.persist.CopyException;
-import com.thera.thermfw.persist.Copyable;
 import com.thera.thermfw.persist.DB2NetDatabase;
 import com.thera.thermfw.persist.Factory;
 import com.thera.thermfw.persist.KeyHelper;
 import com.thera.thermfw.persist.PersistentObject;
 import com.thera.thermfw.persist.Proxy;
 import com.thera.thermfw.persist.SQLServerJTDSNoUnicodeDatabase;
+import com.thera.thermfw.persist.TableManager;
 
 import it.thera.thip.base.articolo.Articolo;
 import it.thera.thip.base.articolo.ArticoloVersione;
@@ -38,6 +37,7 @@ import it.thera.thip.base.comuniVenAcq.TipoCostoRiferimento;
 import it.thera.thip.base.comuniVenAcq.TipoRiga;
 import it.thera.thip.base.comuniVenAcq.web.CalcoloQuantitaWeb;
 import it.thera.thip.base.comuniVenAcq.web.CalcoloQuantitaWrapper;
+import it.thera.thip.base.documenti.DocumentoBase;
 import it.thera.thip.base.generale.Numeratore;
 import it.thera.thip.base.generale.Serie;
 import it.thera.thip.base.generale.UnitaMisura;
@@ -53,8 +53,10 @@ import it.thera.thip.vendite.generaleVE.CausaleRigaDocVen;
 import it.thera.thip.vendite.generaleVE.PersDatiVen;
 import it.thera.thip.vendite.ordineVE.DocEvaVen;
 import it.thera.thip.vendite.ordineVE.GestoreEvasioneVendita;
+import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaLottoPrm;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaPrm;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaTestata;
+import it.thera.thip.vendite.ordineVE.ParamRigaPrmDocEvaVen;
 import it.thera.thip.vendite.prezziExtra.DocRigaPrezziExtraVendita;
 import it.thera.thip.vendite.prezziExtra.OrdineRigaPrezziExtraVendita;
 
@@ -88,7 +90,7 @@ import it.thera.thip.vendite.prezziExtra.OrdineRigaPrezziExtraVendita;
  *         </p>
  */
 
-public class YEvasioneUdsVendita implements BusinessObject {
+public class YEvasioneUdsVendita extends DocumentoBase {
 
 	protected String iIdAzienda;
 
@@ -113,6 +115,8 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	protected Proxy iRelCliente = new Proxy(it.thera.thip.base.cliente.ClienteVendita.class);
 
 	protected Proxy iRelNumeratore = new Proxy(Numeratore.class);
+
+	protected boolean iGeneraDocumento = false;
 
 	@SuppressWarnings("rawtypes")
 	protected List iRigheEstratte;
@@ -273,11 +277,49 @@ public class YEvasioneUdsVendita implements BusinessObject {
 		return iRelCliente.getKey();
 	}
 
+	public boolean isGeneraDocumento() {
+		return iGeneraDocumento;
+	}
+
+	public void setGeneraDocumento(boolean iGeneraDocumento) {
+		this.iGeneraDocumento = iGeneraDocumento;
+	}
+
 	@SuppressWarnings("rawtypes")
 	public List getRigheEstratte() throws ThipException {
 		if (iRigheEstratte == null || this.iRigheEstratte.isEmpty()) {
 			iRigheEstratte = this.estraiRigheOrdine();
 		}
+		return iRigheEstratte;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public List ordinaRigheEstratte() {
+		Collections.sort(iRigheEstratte, new Comparator() {
+			public int compare(Object o1, Object o2) {
+				YEvasioneUdsVenRiga r1 = (YEvasioneUdsVenRiga) o1;
+				YEvasioneUdsVenRiga r2 = (YEvasioneUdsVenRiga) o2;
+
+				OrdineVenditaRigaPrm ord1 = r1.getRigaOrdine();
+				OrdineVenditaRigaPrm ord2 = r2.getRigaOrdine();
+
+				// Se uno dei due è null, lo metti in fondo
+				if (ord1 == null && ord2 == null) return 0;
+				if (ord1 == null) return 1;
+				if (ord2 == null) return -1;
+
+				// Compara per anno
+				int cmp = ord1.getAnnoDocumento().compareTo(ord2.getAnnoDocumento());
+				if (cmp != 0) return cmp;
+
+				// Compara per numero
+				cmp = ord1.getNumeroDocumento().compareTo(ord2.getNumeroDocumento());
+				if (cmp != 0) return cmp;
+
+				// Compara per sequenza
+				return Integer.valueOf(ord1.getSequenzaRiga()).compareTo(Integer.valueOf(ord2.getSequenzaRiga()));
+			}
+		});
 		return iRigheEstratte;
 	}
 
@@ -295,20 +337,26 @@ public class YEvasioneUdsVendita implements BusinessObject {
 		List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(getChiaviSelezionate());
 		List<YUdsVenRig> righe = recuperaListaUdsVenditaRigheDaUdsVendita(testate);
 		Collections.sort(righe, new YOrdinamentoUdsVenRigComparator().orderByIdArticolo);
-		Iterator<YUdsVenRig> iter = righe.iterator();
+		List<YOggettinoRigheAccorpate> righeAccorpate = recuperaRigheAccorpate(righe);
+		Iterator<YOggettinoRigheAccorpate> iter = righeAccorpate.iterator();
 		while (iter.hasNext()) {
 			YEvasioneUdsVenRiga riga = creaRiga();
-			YUdsVenRig rigaUds = (YUdsVenRig) iter.next();
-			if (rigaUds.getQtaPrm().compareTo(BigDecimal.ZERO) == 0) {
-				continue;
+			YOggettinoRigheAccorpate rigaUdsAccorpata = (YOggettinoRigheAccorpate) iter.next();
+			YUdsVenRig rigaUds = rigaUdsAccorpata.riga;
+			if(rigaUds.getDocumentoVenditaRiga() == null) {
+				if (rigaUds.getQtaPrm().compareTo(BigDecimal.ZERO) == 0) {
+					continue;
+				}
+				try {
+					OrdineVenditaRigaPrm rigaOrdine = rigaUds.getOrdineVenditaRigaObj();
+					assegnaDatiRiga(riga, rigaUds, rigaOrdine);
+					riga.setQtaDaSpedireInUMRif(rigaUdsAccorpata.getQuantita());
+				} catch (SQLException e) {
+					e.printStackTrace(Trace.excStream);
+				}
+				riga.getRigheUdsAccorpate().addAll(rigaUdsAccorpata.righeAccorpate);
+				righeEstratte.add(riga);
 			}
-			try {
-				OrdineVenditaRigaPrm rigaOrdine = rigaUds.getOrdineVenditaRigaObj();
-				assegnaDatiRiga(riga, rigaUds, rigaOrdine);
-			} catch (SQLException e) {
-				e.printStackTrace(Trace.excStream);
-			}
-			righeEstratte.add(riga);
 		}
 		return righeEstratte;
 	}
@@ -324,19 +372,6 @@ public class YEvasioneUdsVendita implements BusinessObject {
 		}
 		if(ordVenRig != null)
 			riga.setRigaOrdine(ordVenRig);
-	}
-
-	@Override
-	public String getKey() {
-		return null;
-	}
-
-	@Override
-	public void setKey(String key) {
-	}
-
-	@Override
-	public void setEqual(Copyable obj) throws CopyException {
 	}
 
 	public String getRagioneSocialeCli() {
@@ -382,14 +417,70 @@ public class YEvasioneUdsVendita implements BusinessObject {
 		return em;
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public int save() throws SQLException {
-		return 0;
-	}
+		DocumentoVenditaDataCollector docBODC = (DocumentoVenditaDataCollector) Factory.createObject(DocumentoVenditaDataCollector.class);
+		docBODC.setAutoCommit(false);
+		docBODC.initialize(Factory.getName("DocumentoVendita", Factory.CLASS_HDR), true,PersistentObject.OPTIMISTIC_LOCK);
+		DocumentoVendita documentoVendita = creaDocumentoVenditaTestata(getDataDocumento(), getRCauDocTes(), getRSerie(), getRCliente(),getDataRifIntestatario(), getNumeroRifIntestatario());
+		documentoVendita.setAbilitaCheckBloccoImmissione(false);
+		docBODC.setBo(documentoVendita);
+		int rc = docBODC.save();
+		if (rc == DocumentoVenditaDataCollector.OK) {
+			List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(getChiaviSelezionate());
+			BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
+			BigDecimal totPesoNetto = totalePesi[1];
+			BigDecimal totPesoLordo = totalePesi[0];
+			Iterator iterRigheEstratte = getRigheEstratte().iterator();
+			if(!iterRigheEstratte.hasNext()) {
+				throw new ThipException(new ErrorMessage("YSOFTRE001", "Nessuna riga estratta"));
+			}else {
+				while (iterRigheEstratte.hasNext()) {
+					YEvasioneUdsVenRiga riga = (YEvasioneUdsVenRiga) iterRigheEstratte.next();
+					if(riga.isRigaEstratta()) {
+						YUdsVenRig rigaUds = riga.getRigaUdsVendita();
+						OrdineVenditaRigaPrm rigaOrdine = rigaUds != null ? rigaUds.getOrdineVenditaRigaObj() : riga.getRigaOrdine();
+						DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, rigaUds, riga.getQtaDaSpedireInUMRif(),rigaOrdine);
+						ricalcolaQta(rigaDocumentoVE);
 
-	@Override
-	public int save(boolean force) throws SQLException {
-		return 0;
+						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga.getRigheUdsAccorpate());
+						//.Aggiorno i riferimenti del documento sull'uds se presente
+						if(rigaUds != null) {
+							aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUds, rigaDocumentoVE);
+							rigaUds.rendiDefinitivaRigaUdsVendita();
+						}
+
+						// ora aggiorniamo eventuali riferimenti righe accorpate deep
+						Iterator<YUdsVenRig> righeAccorpateDeep = riga.getRigheUdsAccorpate().iterator();
+						while (righeAccorpateDeep.hasNext()) {
+							YUdsVenRig rigaUdsAccorpata = righeAccorpateDeep.next();
+							aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUdsAccorpata, rigaDocumentoVE);
+							rigaUdsAccorpata.rendiDefinitivaRigaUdsVendita();
+							rigaUdsAccorpata.save();
+						}
+
+						rigaDocumentoVE.save();
+					}
+				}
+
+				documentoVendita.setPesoLordo(totPesoLordo);
+				documentoVendita.setPesoNetto(totPesoNetto);
+				documentoVendita.setRicalcolaPesiEVolume(false);
+				documentoVendita.setNumeroColli(testate.size()); // aggiungere numero colli...sono le chiavi selezionate
+
+				docBODC.setAutoCommit(true); //.Accendo l'autoCommit/rollback
+				rc = docBODC.save();
+				if(rc == BODataCollector.OK) {
+					setKey(docBODC.getBo().getKey()); //.Setto la chiave del documento salvato
+				}else {
+					throw new ThipException(docBODC.getErrorList().getErrors());
+				}
+			}
+		} else {
+			throw new ThipException(docBODC.getErrorList().getErrors());
+		}
+		return 1;
 	}
 
 	@Override
@@ -423,106 +514,106 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * solo se tutto è andato a buon fine, o tutto o niente.
 	 * 
 	 */
-	@SuppressWarnings({ "unchecked" })
-	public static Object generaDocumentoVendita(String[] chiaviSel, Date data, String idCausale, String idSerie,
-			String idCliente, Date dataRifClienteDocVe, String numeroRifCliente) {
-		ErrorList errori = new ErrorList();
-		String chiave = "";
-		Object ogg = new Object[] { errori, chiave };
-		boolean commit = false;
-		try {
-			DocumentoVenditaDataCollector docBODC = (DocumentoVenditaDataCollector) Factory
-					.createObject(DocumentoVenditaDataCollector.class);
-			docBODC.setAutoCommit(false);
-			docBODC.initialize(Factory.getName("DocumentoVendita", Factory.CLASS_HDR), true,
-					PersistentObject.OPTIMISTIC_LOCK);
-			DocumentoVendita documentoVendita = creaDocumentoVenditaTestata(data, idCausale, idSerie, idCliente,
-					dataRifClienteDocVe, numeroRifCliente);
-			documentoVendita.setAbilitaCheckBloccoImmissione(false); // non considerare controllo blocco cliente
-			docBODC.setBo(documentoVendita);
-			docBODC.loadAttValue();
-			docBODC.setAutoCommit(false);
-			int rc = docBODC.save();
-			if (rc == DocumentoVenditaDataCollector.OK) {
-				commit = true;
-			} else {
-				errori.getErrors().addAll(docBODC.getErrorList().getErrors());
-			}
-			documentoVendita.retrieve();
-			chiave = documentoVendita.getKey();
-			// lista uds vendita rige (da dove creo e accorpo le righe)
-			// lista uds vendita testate (da dove prendo il peso) e i numeri dei colli
-			List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(chiaviSel);
-			List<YUdsVenRig> righe = recuperaListaUdsVenditaRigheDaUdsVendita(testate);
-			BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
-			BigDecimal totPesoNetto = totalePesi[1];
-			BigDecimal totPesoLordo = totalePesi[0];
-			Collections.sort(righe, new YOrdinamentoUdsVenRigComparator().orderByIdArticolo);
-			YUdsVenRig rigaUds = null;
-			List<YOggettinoRigheAccorpate> righeAccorpate = recuperaRigheAccorpate(righe);
-			if (righeAccorpate.size() == 0) {
-				commit = false;
-				errori.addError(new ErrorMessage("YSOFTRE001", "Nessuna riga estratta"));
-				return new Object[] { errori, chiave };
-			}
-
-			// Aggiorno i riferimento delle testate che sono state selezionate
-			for (YUdsVendita testata : testate) {
-				aggiornaRiferimentiDocumentoVenditaTestataUds(testata, documentoVendita);
-				testata.rendiDefinitivaUdsVendita();
-				commit = testata.save() >= 0 ? true : false;
-			}
-
-			Iterator<YOggettinoRigheAccorpate> iter = righeAccorpate.iterator();
-			while (iter.hasNext()) {
-				YOggettinoRigheAccorpate oggino = iter.next();
-				rigaUds = (YUdsVenRig) oggino.getRiga();
-				if (rigaUds.getQtaPrm().compareTo(BigDecimal.ZERO) == 0) {
-					errori.addError(
-							new ErrorMessage("YSOFTRE001", "Non e' possibile evadere una riga uds con quantita 0"));
-					return new Object[] { errori, chiave };
-				}
-				OrdineVenditaRigaPrm rigaOrdine = rigaUds.getOrdineVenditaRigaObj();
-				DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, rigaUds, oggino,
-						rigaOrdine);
-				aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaUds, oggino);
-				ricalcolaQta(rigaDocumentoVE);
-				commit = rigaDocumentoVE.save() >= 0 ? true : false;
-				aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUds, rigaDocumentoVE);
-				rigaUds.rendiDefinitivaRigaUdsVendita();
-				commit = rigaUds.save() >= 0 ? true : false;
-
-				// ora aggiorniamo eventuali riferimenti righe accorpate deep
-				Iterator<YUdsVenRig> righeAccorpateDeep = oggino.righeAccorpate.iterator();
-				while (righeAccorpateDeep.hasNext()) {
-					YUdsVenRig riga = righeAccorpateDeep.next();
-					aggiornaRiferimentiDocumentoVenditaRigaUds(riga, rigaDocumentoVE);
-					riga.rendiDefinitivaRigaUdsVendita();
-					riga.save();
-				}
-			}
-			// ora iteriamo tutto per aggiornare i riferimenti
-			if (commit) {
-				// spostare fuori dal for in modo da avere il totale
-				documentoVendita.setPesoLordo(totPesoLordo);
-				documentoVendita.setPesoNetto(totPesoNetto);
-				documentoVendita.setRicalcolaPesiEVolume(false);
-				documentoVendita.setNumeroColli(testate.size()); // aggiungere numero colli...sono le chiavi selezionate
-				commit = documentoVendita.save() > 0 ? true : false;
-			}
-			// }
-			if (commit) {
-				ConnectionManager.commit();
-			} else {
-				ConnectionManager.rollback();
-			}
-		} catch (Exception e) {
-			errori.addError(new ErrorMessage("YSOFTRE001", e.getMessage()));
-			e.printStackTrace(Trace.excStream);
-		}
-		ogg = new Object[] { errori, chiave };
-		return ogg;
-	}
+	//	@SuppressWarnings({ "unchecked" })
+	//	public Object generaDocumentoVendita(String[] chiaviSel, Date data, String idCausale, String idSerie,
+	//			String idCliente, Date dataRifClienteDocVe, String numeroRifCliente) {
+	//		ErrorList errori = new ErrorList();
+	//		String chiave = "";
+	//		Object ogg = new Object[] { errori, chiave };
+	//		boolean commit = false;
+	//		try {
+	//			DocumentoVenditaDataCollector docBODC = (DocumentoVenditaDataCollector) Factory
+	//					.createObject(DocumentoVenditaDataCollector.class);
+	//			docBODC.setAutoCommit(false);
+	//			docBODC.initialize(Factory.getName("DocumentoVendita", Factory.CLASS_HDR), true,
+	//					PersistentObject.OPTIMISTIC_LOCK);
+	//			DocumentoVendita documentoVendita = creaDocumentoVenditaTestata(data, idCausale, idSerie, idCliente,
+	//					dataRifClienteDocVe, numeroRifCliente);
+	//			documentoVendita.setAbilitaCheckBloccoImmissione(false); // non considerare controllo blocco cliente
+	//			docBODC.setBo(documentoVendita);
+	//			docBODC.loadAttValue();
+	//			docBODC.setAutoCommit(false);
+	//			int rc = docBODC.save();
+	//			if (rc == DocumentoVenditaDataCollector.OK) {
+	//				commit = true;
+	//			} else {
+	//				errori.getErrors().addAll(docBODC.getErrorList().getErrors());
+	//			}
+	//			documentoVendita.retrieve();
+	//			chiave = documentoVendita.getKey();
+	//			// lista uds vendita rige (da dove creo e accorpo le righe)
+	//			// lista uds vendita testate (da dove prendo il peso) e i numeri dei colli
+	//			List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(chiaviSel);
+	//			List<YUdsVenRig> righe = recuperaListaUdsVenditaRigheDaUdsVendita(testate);
+	//			BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
+	//			BigDecimal totPesoNetto = totalePesi[1];
+	//			BigDecimal totPesoLordo = totalePesi[0];
+	//			Collections.sort(righe, new YOrdinamentoUdsVenRigComparator().orderByIdArticolo);
+	//			YUdsVenRig rigaUds = null;
+	//			List<YOggettinoRigheAccorpate> righeAccorpate = recuperaRigheAccorpate(righe);
+	//			if (righeAccorpate.size() == 0) {
+	//				commit = false;
+	//				errori.addError(new ErrorMessage("YSOFTRE001", "Nessuna riga estratta"));
+	//				return new Object[] { errori, chiave };
+	//			}
+	//
+	//			// Aggiorno i riferimento delle testate che sono state selezionate
+	//			for (YUdsVendita testata : testate) {
+	//				aggiornaRiferimentiDocumentoVenditaTestataUds(testata, documentoVendita);
+	//				testata.rendiDefinitivaUdsVendita();
+	//				commit = testata.save() >= 0 ? true : false;
+	//			}
+	//
+	//			Iterator<YOggettinoRigheAccorpate> iter = righeAccorpate.iterator();
+	//			while (iter.hasNext()) {
+	//				YOggettinoRigheAccorpate oggino = iter.next();
+	//				rigaUds = (YUdsVenRig) oggino.getRiga();
+	//				if (rigaUds.getQtaPrm().compareTo(BigDecimal.ZERO) == 0) {
+	//					errori.addError(
+	//							new ErrorMessage("YSOFTRE001", "Non e' possibile evadere una riga uds con quantita 0"));
+	//					return new Object[] { errori, chiave };
+	//				}
+	//				OrdineVenditaRigaPrm rigaOrdine = rigaUds.getOrdineVenditaRigaObj();
+	//				DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, rigaUds, oggino,
+	//						rigaOrdine);
+	//				aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaUds, oggino);
+	//				ricalcolaQta(rigaDocumentoVE);
+	//				commit = rigaDocumentoVE.save() >= 0 ? true : false;
+	//				aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUds, rigaDocumentoVE);
+	//				rigaUds.rendiDefinitivaRigaUdsVendita();
+	//				commit = rigaUds.save() >= 0 ? true : false;
+	//
+	//				// ora aggiorniamo eventuali riferimenti righe accorpate deep
+	//				Iterator<YUdsVenRig> righeAccorpateDeep = oggino.righeAccorpate.iterator();
+	//				while (righeAccorpateDeep.hasNext()) {
+	//					YUdsVenRig riga = righeAccorpateDeep.next();
+	//					aggiornaRiferimentiDocumentoVenditaRigaUds(riga, rigaDocumentoVE);
+	//					riga.rendiDefinitivaRigaUdsVendita();
+	//					riga.save();
+	//				}
+	//			}
+	//			// ora iteriamo tutto per aggiornare i riferimenti
+	//			if (commit) {
+	//				// spostare fuori dal for in modo da avere il totale
+	//				documentoVendita.setPesoLordo(totPesoLordo);
+	//				documentoVendita.setPesoNetto(totPesoNetto);
+	//				documentoVendita.setRicalcolaPesiEVolume(false);
+	//				documentoVendita.setNumeroColli(testate.size()); // aggiungere numero colli...sono le chiavi selezionate
+	//				commit = documentoVendita.save() > 0 ? true : false;
+	//			}
+	//			// }
+	//			if (commit) {
+	//				ConnectionManager.commit();
+	//			} else {
+	//				ConnectionManager.rollback();
+	//			}
+	//		} catch (Exception e) {
+	//			errori.addError(new ErrorMessage("YSOFTRE001", e.getMessage()));
+	//			e.printStackTrace(Trace.excStream);
+	//		}
+	//		ogg = new Object[] { errori, chiave };
+	//		return ogg;
+	//	}
 
 	/**
 	 * @author Daniele Signoroni 26/04/2024
@@ -539,7 +630,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param righe
 	 * @return
 	 */
-	protected static List<YOggettinoRigheAccorpate> recuperaRigheAccorpate(List<YUdsVenRig> righe) {
+	protected List<YOggettinoRigheAccorpate> recuperaRigheAccorpate(List<YUdsVenRig> righe) {
 		Collections.sort(righe, new YComparatorRigheOrdineUds()); // le sorto per riga ordine key
 		List<YOggettinoRigheAccorpate> righeAccorpate = new ArrayList<YEvasioneUdsVendita.YOggettinoRigheAccorpate>();
 		YUdsVenRig rigaPrec = null;
@@ -718,7 +809,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param docVenRig
 	 * @param udsCorrente
 	 */
-	public static void accorpaQtaDocumentoVenditaRigaPrm(DocumentoVenRigaPrm docVenRig, YUdsVenRig udsCorrente) {
+	public void accorpaQtaDocumentoVenditaRigaPrm(DocumentoVenRigaPrm docVenRig, YUdsVenRig udsCorrente) {
 		if (docVenRig.getQtaInUMVen() != null && udsCorrente.getQtaPrm() != null)
 			docVenRig.setQtaInUMVen(docVenRig.getQtaInUMVen().add(udsCorrente.getQtaPrm()));
 
@@ -739,7 +830,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @return true se sono da accorpare
 	 * @return false se non sono da accorpare
 	 */
-	public static boolean isAccorpamento(YUdsVenRig uds1, YUdsVenRig uds2) {
+	public boolean isAccorpamento(YUdsVenRig uds1, YUdsVenRig uds2) {
 		boolean isDaRaggruppare = false;
 		if (uds2 == null) {
 			return false;
@@ -763,7 +854,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param numeroRifCliente
 	 * @return
 	 */
-	public static DocumentoVendita creaDocumentoVenditaTestata(Date data, String idCausale, String idSerie,
+	public DocumentoVendita creaDocumentoVenditaTestata(Date data, String idCausale, String idSerie,
 			String idCliente, Date dataRifIntestatario, String numeroRifCliente) {
 		DocumentoVendita docVenTes = (DocumentoVendita) Factory.createObject(DocumentoVendita.class);
 		docVenTes.setIdAzienda(Azienda.getAziendaCorrente());
@@ -787,8 +878,8 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param rigaOrdine
 	 * @return
 	 */
-	public static DocumentoVenRigaPrm creaDocumentoVenditaRigaPrm(DocumentoVendita docVenTes, YUdsVenRig udsVeRig,
-			YOggettinoRigheAccorpate oggino, OrdineVenditaRigaPrm rigaOrdine) {
+	public DocumentoVenRigaPrm creaDocumentoVenditaRigaPrm(DocumentoVendita docVenTes, YUdsVenRig udsVeRig,
+			BigDecimal quantita, OrdineVenditaRigaPrm rigaOrdine) {
 		DocumentoVenRigaPrm docVenRig = (DocumentoVenRigaPrm) Factory.createObject(DocumentoVenRigaPrm.class);
 		docVenRig.setIdAzienda(Azienda.getAziendaCorrente());
 		docVenRig.setTestata(docVenTes);
@@ -807,14 +898,14 @@ public class YEvasioneUdsVendita implements BusinessObject {
 			docVenRig.setIdCauRig(docVenTes.getCausale().getCausaleRigaDocumVenKey());
 		}
 		docVenRig.completaBO();
-		docVenRig.setIdArticolo(udsVeRig.getRArticolo());
+		docVenRig.setIdArticolo(udsVeRig != null ? udsVeRig.getRArticolo() : rigaOrdine.getIdArticolo());
 		docVenRig.cambiaArticolo(docVenRig.getArticolo(), docVenRig.getConfigurazione(), false);
 		UnitaMisura um = docVenRig.getArticolo().getUMDefaultVendita();
 		docVenRig.setUMRif(um);
-		docVenRig.setQtaInUMVen(oggino.getQuantita());
-		docVenRig.setQtaInUMPrm(oggino.getQuantita());
-		docVenRig.setIdEsternoConfig(udsVeRig.getRConfig());
-		docVenRig.setIdVersioneRcs(udsVeRig.getRVersione());
+		docVenRig.setQtaInUMVen(quantita);
+		docVenRig.setQtaInUMPrm(quantita);
+		docVenRig.setIdEsternoConfig(udsVeRig != null ? udsVeRig.getRConfig() : rigaOrdine.getIdEsternoConfig());
+		docVenRig.setIdVersioneRcs(udsVeRig != null ? udsVeRig.getRVersione() : rigaOrdine.getIdVersioneRcs());
 		// ricalcolaQta(docVenRig);
 		return docVenRig;
 	}
@@ -828,10 +919,9 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param oggino
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static void aggiornaAttributiDaRigaOrdine(DocumentoVenRigaPrm docVenRig, YUdsVenRig udsVenRig,
-			YOggettinoRigheAccorpate oggino) {
+	public void aggiornaAttributiDaRigaOrdine(DocumentoVenRigaPrm docVenRig, OrdineVenditaRigaPrm rigaOrdine,
+			List<YUdsVenRig> righeAccorpate) {
 		try {
-			OrdineVenditaRigaPrm rigaOrdine = udsVenRig.getOrdineVenditaRigaObj();
 			if (rigaOrdine != null) {
 				docVenRig.setRigaOrdine(rigaOrdine);
 				docVenRig.setRRigaOrd(rigaOrdine.getNumeroRigaDocumento());
@@ -993,12 +1083,9 @@ public class YEvasioneUdsVendita implements BusinessObject {
 			}
 			if (PersDatiMagazzino.getCurrentPersDatiMagazzino().getGesLotti()) {
 				// if(rigaOrdine != null) {
-				List<YUdsVenRig> righeTot = new ArrayList<YUdsVenRig>();
-				righeTot.add(udsVenRig);
-				righeTot.addAll(oggino.righeAccorpate);
 				// qui dovrei accorpare i lotti e creare un nuovo oggettino con la somma delle
 				// quantita' accorpate per lotto
-				List<YOggettinoRigaLottoAccorpata> righeLottoAccorpate = recuperaRigheLottoAccorpate(righeTot);
+				List<YOggettinoRigaLottoAccorpata> righeLottoAccorpate = recuperaRigheLottoAccorpate(righeAccorpate);
 				Iterator iterRigheTot = righeLottoAccorpate.iterator();
 				while (iterRigheTot.hasNext()) {
 					YOggettinoRigaLottoAccorpata lotto = (YOggettinoRigaLottoAccorpata) iterRigheTot.next();
@@ -1009,7 +1096,26 @@ public class YEvasioneUdsVendita implements BusinessObject {
 					rigaLotto.setIdLotto(lotto.getIdLotto()); // 24-04-24 cambiare a lotto della riga uds
 					rigaLotto.getQtaAttesaEvasione().setQuantitaInUMRif(lotto.getQuantita());
 					rigaLotto.getQtaAttesaEvasione().setQuantitaInUMPrm(lotto.getQuantita());
+
 					docVenRig.getRigheLotto().add(rigaLotto);
+				}
+
+				//.Vuol dire che sto evadendo una riga ordine e non UDS quindi genero i lotti a partire da quelli dell'ordine
+				if(righeAccorpate.isEmpty()) { 
+					Iterator iterLotti = rigaOrdine.getRigheLotto().iterator();
+					while(iterLotti.hasNext()) {
+						OrdineVenditaRigaLottoPrm rigaLottoOrdVenRig = (OrdineVenditaRigaLottoPrm) iterLotti.next();
+
+						DocumentoVenRigaLottoPrm rigaLottoDocVenRig = (DocumentoVenRigaLottoPrm) Factory
+								.createObject(DocumentoVenRigaLottoPrm.class);
+						rigaLottoDocVenRig.setFather(docVenRig);
+						rigaLottoDocVenRig.setIdArticolo(docVenRig.getIdArticolo());
+						rigaLottoDocVenRig.setIdLotto(rigaLottoOrdVenRig.getIdLotto());
+						rigaLottoDocVenRig.getQtaAttesaEvasione().setQuantitaInUMRif(rigaLottoOrdVenRig.getQtaInUMRif());
+						rigaLottoDocVenRig.getQtaAttesaEvasione().setQuantitaInUMPrm(rigaLottoOrdVenRig.getQtaInUMPrmMag());
+
+						docVenRig.getRigheLotto().add(rigaLottoDocVenRig);
+					}
 				}
 			}
 			// }
@@ -1024,7 +1130,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * 
 	 * @param riga
 	 */
-	public static void ricalcolaQta(DocumentoVenRigaPrm riga) {
+	public void ricalcolaQta(DocumentoVenRigaPrm riga) {
 		try {
 			UnitaMisura umRif = getUnitaMisura(riga.getIdUMRif());
 			UnitaMisura umPrm = getUnitaMisura(riga.getIdUMPrm());
@@ -1061,7 +1167,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param idVersione
 	 * @return
 	 */
-	public static ArticoloVersione getArticoloVersione(String idAzienda, String idArticolo, String idVersione) {
+	public ArticoloVersione getArticoloVersione(String idAzienda, String idArticolo, String idVersione) {
 		ArticoloVersione av = null;
 		String azienda = Azienda.getAziendaCorrente();
 		if (idAzienda != null) {
@@ -1082,7 +1188,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param idUM
 	 * @return
 	 */
-	public static UnitaMisura getUnitaMisura(String idUM) {
+	public UnitaMisura getUnitaMisura(String idUM) {
 		UnitaMisura um = null;
 		if (idUM == null || idUM.equals(""))
 			return um;
@@ -1101,7 +1207,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param udsVeRig
 	 * @param docVeRig
 	 */
-	public static void aggiornaRiferimentiDocumentoVenditaRigaUds(YUdsVenRig udsVeRig, DocumentoVenRigaPrm docVeRig) {
+	public void aggiornaRiferimentiDocumentoVenditaRigaUds(YUdsVenRig udsVeRig, DocumentoVenRigaPrm docVeRig) {
 		udsVeRig.setRAnnoDocVen(docVeRig.getTestata().getAnnoDocumento());
 		udsVeRig.setRNumDocVen(docVeRig.getTestata().getNumeroDocumento());
 		udsVeRig.setRRigaDocVen(docVeRig.getNumeroRigaDocumento());
@@ -1117,7 +1223,7 @@ public class YEvasioneUdsVendita implements BusinessObject {
 	 * @param udsVeTes
 	 * @param docVenTes
 	 */
-	public static void aggiornaRiferimentiDocumentoVenditaTestataUds(YUdsVendita udsVeTes, DocumentoVendita docVenTes) {
+	public void aggiornaRiferimentiDocumentoVenditaTestataUds(YUdsVendita udsVeTes, DocumentoVendita docVenTes) {
 		udsVeTes.setRAnnoDocVen(docVenTes.getAnnoDocumento());
 		udsVeTes.setRNumDocVen(docVenTes.getNumeroDocumento());
 	}
@@ -1216,6 +1322,29 @@ public class YEvasioneUdsVendita implements BusinessObject {
 			this.idLotto = idLotto;
 		}
 
+	}
+
+	@SuppressWarnings("rawtypes")
+	public void aggiornaRigheDocumento(List righeParamRiga) throws ThipException {
+		List righeDoc = this.getRigheEstratte();
+		Iterator iter = righeParamRiga.iterator();
+		while (iter.hasNext()) {
+			try {
+				ParamRigaPrmDocEvaVen pr = (ParamRigaPrmDocEvaVen) iter.next();
+				YEvasioneUdsVenRiga rigaPrm = (YEvasioneUdsVenRiga) righeDoc.get(pr.iPos);
+				if(rigaPrm == null)
+					righeDoc.remove(pr.iPos);
+				rigaPrm.aggiornaRiga(pr);
+			}
+			catch (IndexOutOfBoundsException ex) {
+				ex.printStackTrace(Trace.excStream);
+			}
+		}
+	}
+
+	@Override
+	protected TableManager getTableManager() throws SQLException {
+		return null;
 	}
 
 }

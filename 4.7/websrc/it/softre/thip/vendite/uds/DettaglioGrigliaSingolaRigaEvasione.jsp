@@ -38,9 +38,10 @@ int idx = 0;
   List errors = new ArrayList(); 
   WebJSTypeList jsList = new WebJSTypeList(); 
   WebForm YEvasioneUdsVenRigaForm =  
-     new com.thera.thermfw.web.WebForm(request, response, "YEvasioneUdsVenRigaForm", "YEvasioneUdsVenRiga", null, "it.thera.thip.vendite.ordineVE.servlet.GestoreEstrazioneEvasioneForm", false, false, false, false, true, true, null, 1, false, "it/thera/thip/vendite/ordineVE/EvasioneOrdini.js"); 
+     new com.thera.thermfw.web.WebForm(request, response, "YEvasioneUdsVenRigaForm", "YEvasioneUdsVenRiga", null, "it.softre.thip.vendite.uds.web.YEvasioneUdsGrigliaFormActionAdapter", false, false, false, false, true, true, null, 1, false, "it/thera/thip/vendite/ordineVE/EvasioneOrdini.js"); 
   YEvasioneUdsVenRigaForm.setServletEnvironment(se); 
   YEvasioneUdsVenRigaForm.setJSTypeList(jsList); 
+  YEvasioneUdsVenRigaForm.setWebFormModifierClass("it.softre.thip.vendite.uds.web.YDettaglioGrigliaSingolaRigaEvasioneFormModifier"); 
   YEvasioneUdsVenRigaForm.setHeader(null); 
   YEvasioneUdsVenRigaForm.setFooter(null); 
   YEvasioneUdsVenRigaForm.setDeniedAttributeModeStr("hideNone"); 
@@ -140,6 +141,7 @@ int idx = 0;
 	if (dev != null) {  
 		docEvaVen.setChiaviSelezionate(dev.getChiaviSel());
 		righe = docEvaVen.getRigheEstratte();
+		righe = docEvaVen.ordinaRigheEstratte();
 	} 
 	int colonne = 12; 
 	%>
@@ -150,6 +152,36 @@ int idx = 0;
   <tr>
     <td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaSelezioneLabel">
  <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.Selezione", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaIdArticoloLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.IdArticolo", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaIdMagazzinoLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.IdMagazzino", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaDataConsegnaConfermataLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.DataConsegnaConfermata", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaIdUMVenLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.IdUMVen", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaQtaResInUMVenLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.QtaResInUMVen", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaQtaSpedireLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.QtaSpedire", null, null, null, null); 
  label.setParent(YEvasioneUdsVenRigaForm); 
 label.write(out); }%> 
 </label></td>
@@ -168,37 +200,11 @@ label.write(out); }%>
  label.setParent(YEvasioneUdsVenRigaForm); 
 label.write(out); }%> 
 </label></td>
-<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaIdArticoloLabel">
- <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.IdArticolo", null, null, null, null); 
- label.setParent(YEvasioneUdsVenRigaForm); 
-label.write(out); }%> 
-</label></td>
-<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaDataConsegnaConfermataLabel">
- <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.DataConsegnaConfermata", null, null, null, null); 
- label.setParent(YEvasioneUdsVenRigaForm); 
-label.write(out); }%> 
-</label></td>
-<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaQtaResInUMVenLabel">
- <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.QtaResInUMVen", null, null, null, null); 
- label.setParent(YEvasioneUdsVenRigaForm); 
-label.write(out); }%> 
-</label></td>
-<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaQtaSpedireLabel">
- <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.QtaResInUMVen", null, null, null, null); 
- label.setParent(YEvasioneUdsVenRigaForm); 
-label.write(out); }%> 
-</label></td>
-<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaIdUMVenLabel">
- <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.IdUMVen", null, null, null, null); 
- label.setParent(YEvasioneUdsVenRigaForm); 
-label.write(out); }%> 
-</label></td>
 <td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaSaldoRigaLabel">
  <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.SaldoRiga", null, null, null, null); 
  label.setParent(YEvasioneUdsVenRigaForm); 
 label.write(out); }%> 
 </label></td>
-
   </tr>
 <%     
 String prefixDettaglioDisp = "DettaglioDisp";
@@ -233,6 +239,7 @@ while (myRighe.hasNext()) {
 			strForzable = "disabled=\"\"";
 		} 
 	}
+	YEvasioneUdsVenRigaForm.getBODataCollector().setBo(riga);
 %>
   <tr class="<%=cssTRrigaEstrazione%>">
     <td colspan="<%=colonne%>" height="5"></td>
@@ -240,30 +247,21 @@ while (myRighe.hasNext()) {
   <tr class="<%=cssTRrigaEstrazione%>">
   	<input type="hidden" name="IdArticolo<%=idx%>" value="<%=riga.getIdArticolo()%>"/> 
  	<input type="hidden" name="isSelezionabile<%=idx%>" value="<%=riga.isSelezionabile()%>"/>
- 	<input type="hidden" name="isForzabile<%=idx%>" value="<%=riga.isForzabile()%>"/> 
 
     <td class="cellRigaEstratta" rowspan="2">
     	<input <%=strDisabled%> id="RigaEstratta<%=idx%>" name="RigaEstratta<%=idx%>" onclick="deselezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaEstratta()?"checked":"")%>>
     </td>
-    <td class="cellArticolo">
+     <td class="cellArticolo">
     <%
-    String urlArticolo = "";
-    if (urlArticolo != null) {
-    	urlArticolo = request.getContextPath() + urlArticolo;
-    }
     String labelArticolo = riga.getIdArticolo();
     %>
-      <label onclick="javascript:dettaglioArticolo('<%=urlArticolo%>')">
+      <label>
         <%=labelArticolo%>
       </label>
     </td>
     <td class="cellMagazzino">
 	<%
-	if (riga.getIdMagazzino() == null) {  
-	%>
-    &nbsp;
-	<%  
-	}else if (!riga.isCambioMagazzinoAbilitato() ) {  
+	if (!riga.isCambioMagazzinoAbilitato()){  
 	%>
 	<% 
 		WebTextInputIndexed YEvasioneUdsVenRigaIdMagazzino =  
@@ -271,7 +269,7 @@ while (myRighe.hasNext()) {
 		YEvasioneUdsVenRigaIdMagazzino.setOnChange("selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'IdMagazzino', 'RigaEstratta');CambioMagEvasione(this,'IdMagazzino')"); 
 		YEvasioneUdsVenRigaIdMagazzino.setParent(YEvasioneUdsVenRigaForm); 
 		%>
-		<input class="<%=YEvasioneUdsVenRigaIdMagazzino.getClassType()%>" disabled id="<%=YEvasioneUdsVenRigaIdMagazzino.getId()%>" maxlength="<%=YEvasioneUdsVenRigaIdMagazzino.getMaxLength()%>" name="<%=YEvasioneUdsVenRigaIdMagazzino.getName()%>" readonly size="2" style="width:100%;background-color:#E8E8E8" type="text" value="Magazzino1"><% 
+		<input class="<%=YEvasioneUdsVenRigaIdMagazzino.getClassType()%>" disabled id="<%=YEvasioneUdsVenRigaIdMagazzino.getId()%>" maxlength="<%=YEvasioneUdsVenRigaIdMagazzino.getMaxLength()%>" name="<%=YEvasioneUdsVenRigaIdMagazzino.getName()%>" readonly size="2" style="width:100%;background-color:#E8E8E8" type="text" value="<%=riga.getIdMagazzino()%>"><% 
 		YEvasioneUdsVenRigaIdMagazzino.write(out); 
 		%>
 
@@ -293,19 +291,12 @@ while (myRighe.hasNext()) {
 	%>
     </td>
     <td class="cellDataConsegna">
-      <% 
-  	WebTextInputIndexed YEvasioneUdsVenRigaDataConsegnaConfermataRO =  
-	     new com.thera.thermfw.web.WebTextInputIndexed(idx, "YEvasioneUdsVenRiga", "DataConsegnaConfermata"); 
-	  YEvasioneUdsVenRigaDataConsegnaConfermataRO.setParent(YEvasioneUdsVenRigaForm); 
-	%>
-	<input class="<%=YEvasioneUdsVenRigaDataConsegnaConfermataRO.getClassType()%>" disabled id="<%=YEvasioneUdsVenRigaDataConsegnaConfermataRO.getId()%>" maxlength="<%=YEvasioneUdsVenRigaDataConsegnaConfermataRO.getMaxLength()%>" name="<%=YEvasioneUdsVenRigaDataConsegnaConfermataRO.getName()%>" size="8" type="text" style="width:100%"><% 
- 	 YEvasioneUdsVenRigaDataConsegnaConfermataRO.write(out); 
-	%>
+      <input size="20" type="text" id="DataConsegnaCFM<%=idx%>" name="DataConsegnaCFM<%=idx%>" value="<%=riga.getDataConsegnaConfermata()%>" disabled=""/>
     </td>
- 	<% 
+    <% 
  	String UMV = riga.getIdUMRif(); 
 	%>
-		<td colspan="4" rowspan="2" valign="top">
+		<td colspan="3" rowspan="2" valign="top">
       <table border="0" cellpadding="0" cellspacing="0" width="100%">
         <tr class="<%=cssTRrigaEstrazione%>">
           <td class="cellIdUM">
@@ -324,14 +315,11 @@ while (myRighe.hasNext()) {
 <input style="width:100%" <%=strDisabled%> class="<%=YEvasioneUdsVenRigaQtaDaSpedireInUMRif.getClassType()%>" id="<%=YEvasioneUdsVenRigaQtaDaSpedireInUMRif.getId()%>" maxlength="<%=YEvasioneUdsVenRigaQtaDaSpedireInUMRif.getMaxLength()%>" name="<%=YEvasioneUdsVenRigaQtaDaSpedireInUMRif.getName()%>" size="8" type="text"><% 
   YEvasioneUdsVenRigaQtaDaSpedireInUMRif.write(out); 
 %>
-    <td class="cellRigaSaldata" rowspan="2">
-      <%       if (riga.isSaldoAutomatico()) {       %>
-      <input disabled id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
-      <%       }       else {       %>
-      <input <%=strDisabled%> id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaSaldata', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
-      <%       }       %>
-    </td>
-    <td class="cellRifRigaOrdine">
+	</td>
+	</tr>
+	</table>
+	</td>
+	 <td class="cellRifRigaOrdine">
     <%
     if (rigaOrd != null) {       
     	String urlRigaOrdine = "";
@@ -339,11 +327,23 @@ while (myRighe.hasNext()) {
     		urlRigaOrdine = request.getContextPath() + urlRigaOrdine;
     	}         %>
         <input style="width:100%" id="RifRigaOrdine<%=idx%>" name="RifRigaOrdine<%=idx%>" onclick="javascript:dettaglioRigaOrdine('<%=urlRigaOrdine%>')" readonly size="20" type="text" value="<%=riga.getRifRigaOrdineFormattato()%>">
-        <label style="text-decoration: underline; color: Blue; cursor: hand;" onclick="javascript:dettaglioRigaOrdine('<%=urlRigaOrdine%>')">           <input size="20" type="text" id="RifRigaOrdine<%=idx%>" name="RifRigaOrdine<%=idx%>" value="<%=riga.getRifRigaOrdineFormattato()%>" disabled=""/>         </label>
-      <%     } %>
+        <label style="text-decoration: underline; color: Blue; cursor: hand;" onclick="javascript:dettaglioRigaOrdine('<%=urlRigaOrdine%>')">
+      <%     
+      } 
+      %>
     </td>
-    <td class="cellRigaForzata" rowspan="2">
-      <input <%=strForzable%> id="RigaForzata<%=idx%>" name="RigaForzata<%=idx%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaForzata', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaForzata()?"checked":"")%>>
+    <td class="cellIdCommessa">
+    	<input size="20" type="text" id="Commessa<%=idx%>" name="Commessa<%=idx%>" value="<%=riga.getIdCommessa()%>" disabled=""/>
+    </td>
+    <td class="cellSequenza">
+    	<input size="20" type="text" id="Sequenza<%=idx%>" name="Sequenza<%=idx%>" value="<%=riga.getSequenza()%>" disabled=""/>
+    </td>
+    <td class="cellRigaSaldata" rowspan="2">
+      <%       if (riga.isSaldoAutomatico()) {       %>
+      <input disabled id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
+      <%       }       else {       %>
+      <input <%=strDisabled%> id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaSaldata', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
+      <%       }       %>
     </td>
   </tr>
   <tr class="<%=cssTRrigaEstrazione%>">
@@ -358,15 +358,6 @@ while (myRighe.hasNext()) {
 <input style="width:100%" <%=strDisabled%> class="<%=YEvasioneUdsVenRigaDescrizioneArticolo.getClassType()%>" id="<%=YEvasioneUdsVenRigaDescrizioneArticolo.getId()%>" maxlength="<%=YEvasioneUdsVenRigaDescrizioneArticolo.getMaxLength()%>" name="<%=YEvasioneUdsVenRigaDescrizioneArticolo.getName()%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'DescrizioneArticolo', 'RigaEstratta')" size="35" type="text" value='<%=WebElement.formatStringForHTML(riga.getDescrizioneArticolo())%>'><% 
   YEvasioneUdsVenRigaDescrizioneArticolo.write(out); 
 %>
-    </td>
-  </tr>
-
-
-  <tr class="<%=cssTRrigaEstrazione%>">
-    <td height="5">
-      <input id="StatoAvanzamento1" name="StatoAvanzamento1" size="3" type="hidden">
-    </td>
-    <td colspan="<%=(colonne - 1)%>" height="0">
     </td>
   </tr>
   <%   idx++;   %> 

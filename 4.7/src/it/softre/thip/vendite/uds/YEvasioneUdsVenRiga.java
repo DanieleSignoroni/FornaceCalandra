@@ -2,6 +2,8 @@ package it.softre.thip.vendite.uds;
 
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.thera.thermfw.common.BusinessObjectAdapter;
 import com.thera.thermfw.persist.KeyHelper;
@@ -11,6 +13,7 @@ import it.thera.thip.base.azienda.Azienda;
 import it.thera.thip.base.comuniVenAcq.RigaPrimaria;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRiga;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaPrm;
+import it.thera.thip.vendite.ordineVE.ParamRigaPrmDocEvaVen;
 
 /**
  * <p></p>
@@ -38,7 +41,12 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 	protected Proxy iUdsVendita = new Proxy(it.softre.thip.vendite.uds.YUdsVendita.class);
 	protected Proxy iRigaUdsVendita = new Proxy(it.softre.thip.vendite.uds.YUdsVenRig.class);
 
+	@SuppressWarnings("rawtypes")
+	protected List iRigheUdsAccorpate = new ArrayList();
+
 	protected OrdineVenditaRigaPrm rigaOrdine = null;
+	private boolean isRigaEstratta = false;
+	private BigDecimal iQtaDaSpedireInUMRif = null;
 
 	protected char iTipoRiga = RIGA_UDS;
 
@@ -132,13 +140,13 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 		return iRigaUdsVendita.getKey();
 	}
 
-	public String getIdRigaUdsVendita() {
+	public Integer getIdRigaUdsVendita() {
 		String key = iRigaUdsVendita.getKey();
 		String objRIdUdsPadre = KeyHelper.getTokenObjectKey(key,3);
-		return objRIdUdsPadre;
+		return Integer.valueOf(objRIdUdsPadre != null ? objRIdUdsPadre : "0");
 	}
 
-	public void setIdRigaUdsVendita(String iRIdUdsPadre) {
+	public void setIdRigaUdsVendita(Integer iRIdUdsPadre) {
 		String key = iRigaUdsVendita.getKey();
 		iRigaUdsVendita.setKey(KeyHelper.replaceTokenObjectKey(key , 3, iRIdUdsPadre));
 	}
@@ -149,6 +157,16 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 
 	public void setRigaOrdine(OrdineVenditaRigaPrm rigaOrdine) {
 		this.rigaOrdine = rigaOrdine;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public List getRigheUdsAccorpate() {
+		return iRigheUdsAccorpate;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public void setRigheUdsAccorpate(List iRigheUdsAccorpate) {
+		this.iRigheUdsAccorpate = iRigheUdsAccorpate;
 	}
 
 	public String getIdArticolo() {
@@ -163,12 +181,8 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 	}
 
 	public String getIdMagazzino() {
-		if(getTipoRiga() == RIGA_UDS) {
-			return "";
-		}else if(getTipoRiga() == RIGA_ORDINE) {
-			if(getRigaOrdine() != null)
-				return getRigaOrdine().getIdMagazzino();
-		}
+		if(getRigaOrdine() != null)
+			return getRigaOrdine().getIdMagazzino();
 		return "";
 	}
 
@@ -181,20 +195,18 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 
 	public Date getDataConsegnaConfermata() {
 		if(getRigaOrdine() != null) {
-			getRigaOrdine().getDataConsegnaConfermata();
+			//SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
+			return getRigaOrdine().getDataConsegnaConfermata();
 		}
 		return null;
 	}
 
 	public BigDecimal getQtaDaSpedireInUMRif() {
-		if(getTipoRiga() == RIGA_UDS) {
-			if(getRigaUdsVendita() != null) 
-				return getRigaUdsVendita().getQtaVen();
-		}else if(getTipoRiga() == RIGA_ORDINE) {
-			if(getRigaOrdine() != null)
-				return getRigaOrdine().getQuantitaResiduo().getQuantitaInUMRif();
-		}
-		return BigDecimal.ZERO;
+		return iQtaDaSpedireInUMRif;
+	}
+
+	public void setQtaDaSpedireInUMRif(BigDecimal iQtaDaSpedireInUMRif) {
+		this.iQtaDaSpedireInUMRif = iQtaDaSpedireInUMRif;
 	}
 
 	public String getRifRigaOrdineFormattato() {
@@ -264,7 +276,36 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 	}
 
 	public boolean isRigaEstratta() {
-		return false;
+		return isRigaEstratta;
+	}
+
+	public void setRigaEstratta(boolean isOk) {
+		isRigaEstratta = isOk;
+	}
+
+	public String getIdCommessa() {
+		if(getTipoRiga() == RIGA_UDS) {
+			if(getRigaUdsVendita() != null) 
+				return getRigaUdsVendita().getIdCommessa();
+		}else if(getTipoRiga() == RIGA_ORDINE) {
+			if(getRigaOrdine() != null)
+				return getRigaOrdine().getIdCommessa();
+		}
+		return "";
+	}
+
+	public String getSequenza() {
+		if(getRigaOrdine() != null)
+			return String.valueOf(getRigaOrdine().getSequenzaRiga());
+		return "";
+	}
+
+	/**
+	 * Aggiorna la riga di evasione con i parametri scelti nella form di evasione
+	 * @param pr
+	 */
+	protected void aggiornaRiga(ParamRigaPrmDocEvaVen pr) {
+		this.setRigaEstratta(pr.iEstratta);
 	}
 
 }

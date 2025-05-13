@@ -80,7 +80,7 @@
   GrigliaToolBarTB.setParent(YEvasioneUdsVenditaForm); 
    request.setAttribute("toolBar", GrigliaToolBarTB); 
 %> 
-<jsp:include page="/it/thera/thip/cs/defObjMenu.jsp" flush="true"> 
+<jsp:include page="/it/thera/thip/cs/defObjMenuGrigliaEvasione.jsp" flush="true"> 
 <jsp:param name="partRequest" value="toolBar"/> 
 </jsp:include> 
 <% 

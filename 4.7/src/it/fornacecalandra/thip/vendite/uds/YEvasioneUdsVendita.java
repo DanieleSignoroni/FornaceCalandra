@@ -1,7 +1,11 @@
 package it.fornacecalandra.thip.vendite.uds;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import it.softre.thip.vendite.uds.YEvasioneUdsVenRiga;
 import it.thera.thip.base.articolo.Articolo;
@@ -30,7 +34,17 @@ public class YEvasioneUdsVendita extends it.softre.thip.vendite.uds.YEvasioneUds
 	@Override
 	protected List estraiRigheOrdine() {
 		List righeEstratte = super.estraiRigheOrdine();
-		for (Iterator iterator = righeEstratte.iterator(); iterator.hasNext();) {
+		Iterator iterator = righeEstratte.iterator();
+		List newRigheEstratte = new ArrayList();
+		Map<String,String> righeOrdineEstratte = new HashMap<String, String>();
+		while(iterator.hasNext()) {
+			YEvasioneUdsVenRiga riga = (YEvasioneUdsVenRiga) iterator.next();
+			if(riga.getRigaOrdine() != null) {
+				righeOrdineEstratte.put(riga.getRigaOrdine().getKey(), riga.getRigaOrdine().getKey());
+			}
+		}
+		iterator = righeEstratte.iterator();
+		while(iterator.hasNext()) {
 			YEvasioneUdsVenRiga riga = (YEvasioneUdsVenRiga) iterator.next();
 			if(riga.getTipoRiga() == YEvasioneUdsVenRiga.RIGA_UDS) {
 				OrdineVendita ordVenTes = (OrdineVendita) riga.getRigaOrdine().getTestata();
@@ -39,14 +53,19 @@ public class YEvasioneUdsVendita extends it.softre.thip.vendite.uds.YEvasioneUds
 					OrdineVenditaRigaPrm ordVenRig = (OrdineVenditaRigaPrm) iterRighe.next();
 					if(ordVenRig.getNumeroRigaDocumento().compareTo(riga.getRigaOrdine().getNumeroRigaDocumento()) != 0
 							&& !isArticoloGestitoCataste(ordVenRig.getArticolo())) { //.Inserisco solo articoli NON gestiti a cataste
-						YEvasioneUdsVenRiga newRiga = creaRiga();
-						assegnaDatiRiga(newRiga, null, ordVenRig);
-						
-						righeEstratte.add(newRiga);
+						if(!righeOrdineEstratte.containsKey(ordVenRig.getKey()) && ordVenRig.getQuantitaResiduo().getQuantitaInUMRif().compareTo(BigDecimal.ZERO) > 0) {
+							YEvasioneUdsVenRiga newRiga = creaRiga();
+							newRiga.setTipoRiga(YEvasioneUdsVenRiga.RIGA_ORDINE);
+							assegnaDatiRiga(newRiga, null, ordVenRig);
+							newRiga.setQtaDaSpedireInUMRif(ordVenRig.getQuantitaResiduo().getQuantitaInUMRif());
+							newRigheEstratte.add(newRiga);
+							righeOrdineEstratte.put(ordVenRig.getKey(), ordVenRig.getKey());
+						}
 					}
 				}
 			}
 		}
+		righeEstratte.addAll(newRigheEstratte);
 		return righeEstratte;
 	}
 
