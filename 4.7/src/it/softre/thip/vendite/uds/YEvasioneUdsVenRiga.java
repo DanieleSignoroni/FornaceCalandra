@@ -46,6 +46,7 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 
 	protected OrdineVenditaRigaPrm rigaOrdine = null;
 	private boolean isRigaEstratta = false;
+	private boolean iRigaSaldata       = false ;
 	private BigDecimal iQtaDaSpedireInUMRif = null;
 
 	protected char iTipoRiga = RIGA_UDS;
@@ -257,7 +258,15 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 	}
 
 	public boolean isRigaSaldata() {
-		return false;
+		return iRigaSaldata;
+	}
+
+	/**
+	 * Imposta il saldo manuale
+	 * @param isOk true saldo manuale, false altrimenti
+	 */
+	public void setRigaSaldata(boolean isOk) {
+		iRigaSaldata = isOk;
 	}
 
 	public boolean isRigaForzata() {
@@ -306,6 +315,7 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 	 */
 	protected void aggiornaRiga(ParamRigaPrmDocEvaVen pr) {
 		this.setRigaEstratta(pr.iEstratta);
+		this.setRigaSaldata(pr.iSaldo || isSaldoAutomatico());
 	}
 
 }

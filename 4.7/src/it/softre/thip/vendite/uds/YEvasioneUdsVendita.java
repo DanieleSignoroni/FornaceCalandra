@@ -451,6 +451,10 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 						OrdineVenditaRigaPrm rigaOrdine = rigaUds != null ? rigaUds.getOrdineVenditaRigaObj() : riga.getRigaOrdine();
 						DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, rigaUds, riga.getQtaDaSpedireInUMRif(),rigaOrdine);
 						ricalcolaQta(rigaDocumentoVE);
+						
+						if(riga.isRigaSaldata()) {
+							rigaDocumentoVE.setRigaSaldata(true);
+						}
 
 						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga.getRigheUdsAccorpate());
 						
