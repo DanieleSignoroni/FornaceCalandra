@@ -432,6 +432,14 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 			BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
 			BigDecimal totPesoNetto = totalePesi[1];
 			BigDecimal totPesoLordo = totalePesi[0];
+
+			// Aggiorno i riferimento delle testate che sono state selezionate
+			for (YUdsVendita testata : testate) {
+				aggiornaRiferimentiDocumentoVenditaTestataUds(testata, documentoVendita);
+				testata.rendiDefinitivaUdsVendita();
+				testata.save();
+			}
+
 			Iterator iterRigheEstratte = getRigheEstratte().iterator();
 			if(!iterRigheEstratte.hasNext()) {
 				throw new ThipException(new ErrorMessage("YSOFTRE001", "Nessuna riga estratta"));
@@ -445,10 +453,14 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 						ricalcolaQta(rigaDocumentoVE);
 
 						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga.getRigheUdsAccorpate());
+						
+						rigaDocumentoVE.save();
+						
 						//.Aggiorno i riferimenti del documento sull'uds se presente
 						if(rigaUds != null) {
 							aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUds, rigaDocumentoVE);
 							rigaUds.rendiDefinitivaRigaUdsVendita();
+							rigaUds.save();
 						}
 
 						// ora aggiorniamo eventuali riferimenti righe accorpate deep
@@ -459,8 +471,6 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 							rigaUdsAccorpata.rendiDefinitivaRigaUdsVendita();
 							rigaUdsAccorpata.save();
 						}
-
-						rigaDocumentoVE.save();
 					}
 				}
 
