@@ -1,12 +1,16 @@
 package it.softre.thip.vendite.uds.web;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 import javax.servlet.ServletException;
 
 import com.thera.thermfw.ad.ClassADCollection;
 import com.thera.thermfw.web.ServletEnvironment;
+import com.thera.thermfw.web.WebElement;
 import com.thera.thermfw.web.WebForm;
+import com.thera.thermfw.web.WebToolBar;
+import com.thera.thermfw.web.WebToolBarButton;
 
 import it.thera.thip.base.comuniVenAcq.web.EvasioneOrdiniConst;
 import it.thera.thip.base.documenti.web.DocumentoDatiSessione;
@@ -70,6 +74,22 @@ public class YEvasioneUdsGrigliaFormActionAdapter extends DocumentoNuovoFormActi
 		}
 	}
 
+	@SuppressWarnings("rawtypes")
+	@Override
+	public void modifyToolBar(WebToolBar toolBar) {
+		super.modifyToolBar(toolBar);
+		Iterator iter = toolBar.getButtons().iterator();
+		while(iter.hasNext()) {
+			WebElement elem = (WebElement) iter.next();
+			if(elem instanceof WebToolBarButton
+					&& ((((WebToolBarButton) elem).getAction().equals(EvasioneOrdiniConst.AZIONE_EVADI_DOCUMENTO))
+							|| ((WebToolBarButton) elem).getAction().equals("SELEZIONA_TUTTO"))) {
+			}else {
+				iter.remove();
+			}
+		}
+	}
+
 	protected void sendToGuida(ClassADCollection cadc, ServletEnvironment se) throws
 	ServletException,
 	IOException {
@@ -96,7 +116,7 @@ public class YEvasioneUdsGrigliaFormActionAdapter extends DocumentoNuovoFormActi
 		datiInSessione = (YDatiSessioneEvasioneUdsVendita)DocumentoDatiSessione.getDocumentoDatiSessione(form.getServletEnvironment());
 		return datiInSessione;
 	}
-	
+
 	protected String getServletNameGestoreRiga() {
 		return null;
 	}

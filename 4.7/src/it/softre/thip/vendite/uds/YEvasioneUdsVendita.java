@@ -42,6 +42,7 @@ import it.thera.thip.base.generale.Numeratore;
 import it.thera.thip.base.generale.Serie;
 import it.thera.thip.base.generale.UnitaMisura;
 import it.thera.thip.base.prezziExtra.DocOrdRigaPrezziExtra;
+import it.thera.thip.cs.DatiComuniEstesi;
 import it.thera.thip.cs.ThipException;
 import it.thera.thip.magazzino.generalemag.PersDatiMagazzino;
 import it.thera.thip.vendite.documentoVE.DocumentoVenRigaLottoPrm;
@@ -50,6 +51,7 @@ import it.thera.thip.vendite.documentoVE.DocumentoVendita;
 import it.thera.thip.vendite.documentoVE.web.DocumentoVenditaDataCollector;
 import it.thera.thip.vendite.generaleVE.CausaleDocumentoVendita;
 import it.thera.thip.vendite.generaleVE.CausaleRigaDocVen;
+import it.thera.thip.vendite.generaleVE.CausaleRigaOrdVen;
 import it.thera.thip.vendite.generaleVE.PersDatiVen;
 import it.thera.thip.vendite.ordineVE.DocEvaVen;
 import it.thera.thip.vendite.ordineVE.GestoreEvasioneVendita;
@@ -203,19 +205,25 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	}
 
 	public String getRCauDocTes() {
-		return iRCauDocTes;
+		String key = iRelRCauDocTes.getKey();
+		String rCausale = KeyHelper.getTokenObjectKey(key,2);
+		return rCausale;
 	}
 
-	public void setRCauDocTes(String iRCauDocTes) {
-		this.iRCauDocTes = iRCauDocTes;
+	public void setRCauDocTes(String rCausale) {
+		String key = iRelRCauDocTes.getKey();
+		iRelRCauDocTes.setKey(KeyHelper.replaceTokenObjectKey(key , 2, rCausale));
 	}
 
 	public String getRCliente() {
-		return iRCliente;
+		String key = iRelCliente.getKey();
+		String objRCliente = KeyHelper.getTokenObjectKey(key,2);
+		return objRCliente;
 	}
 
 	public void setRCliente(String iRCliente) {
-		this.iRCliente = iRCliente;
+		String key = iRelCliente.getKey();
+		iRelCliente.setKey(KeyHelper.replaceTokenObjectKey(key , 2, iRCliente));
 	}
 
 	public CausaleDocumentoVendita getCausale() {
@@ -446,20 +454,21 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 			}else {
 				while (iterRigheEstratte.hasNext()) {
 					YEvasioneUdsVenRiga riga = (YEvasioneUdsVenRiga) iterRigheEstratte.next();
-					if(riga.isRigaEstratta()) {
+					if(riga.isRigaEstratta()
+							|| (riga.getUdsVendita() != null)) {
 						YUdsVenRig rigaUds = riga.getRigaUdsVendita();
 						OrdineVenditaRigaPrm rigaOrdine = rigaUds != null ? rigaUds.getOrdineVenditaRigaObj() : riga.getRigaOrdine();
 						DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, rigaUds, riga.getQtaDaSpedireInUMRif(),rigaOrdine);
 						ricalcolaQta(rigaDocumentoVE);
-						
+
 						if(riga.isRigaSaldata()) {
 							rigaDocumentoVE.setRigaSaldata(true);
 						}
 
 						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga.getRigheUdsAccorpate());
-						
+
 						rigaDocumentoVE.save();
-						
+
 						//.Aggiorno i riferimenti del documento sull'uds se presente
 						if(rigaUds != null) {
 							aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUds, rigaDocumentoVE);
@@ -937,6 +946,9 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 			List<YUdsVenRig> righeAccorpate) {
 		try {
 			if (rigaOrdine != null) {
+				CausaleRigaDocVen cauRigaDoc = trovaCausaleRigaDocVen(rigaOrdine);
+				if(cauRigaDoc != null)
+					docVenRig.setCausaleRiga(cauRigaDoc);
 				docVenRig.setRigaOrdine(rigaOrdine);
 				docVenRig.setRRigaOrd(rigaOrdine.getNumeroRigaDocumento());
 				docVenRig.setSpecializzazioneRiga(rigaOrdine.getSpecializzazioneRiga());
@@ -1354,6 +1366,130 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 				ex.printStackTrace(Trace.excStream);
 			}
 		}
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public CausaleRigaDocVen trovaCausaleRigaDocVen(OrdineVenditaRigaPrm
+			rigaOrdine) {
+		List causaliRigaDoc = new ArrayList();
+		// pongo come prina causale quella eventualmente selezionata come default
+		List causaliRigaDocTemp = getCausale().getCausaliRiga();
+		CausaleRigaDocVen cauRigaDocDefault = getCausale().getCausaleRigaDocumVen();
+		int idx = 0;
+		String cauRigaDocDefaultKey = "";
+
+		if (cauRigaDocDefault != null &&
+				cauRigaDocDefault.getDatiComuniEstesi().getStato() ==
+				DatiComuniEstesi.VALIDO) {
+			causaliRigaDoc.add(idx, cauRigaDocDefault);
+			cauRigaDocDefaultKey = cauRigaDocDefault.getKey();
+			idx++;
+		}
+		Iterator iterDocTemp = causaliRigaDocTemp.iterator();
+		while (iterDocTemp.hasNext()) {
+			CausaleRigaDocVen cauObj = (CausaleRigaDocVen) iterDocTemp.next();
+			if (!cauObj.getKey().equals(cauRigaDocDefaultKey) &&
+					cauObj.getDatiComuniEstesi().getStato() == DatiComuniEstesi.VALIDO) {
+				causaliRigaDoc.add(idx, cauObj);
+				idx++;
+			}
+		}
+		// cerca la causale appropriata
+		CausaleRigaDocVen cauRigaDoc = null;
+		boolean isTrovata = false;
+		cauRigaDoc = trovaCausaleRigaDocVen(rigaOrdine, causaliRigaDoc, true);
+		if (cauRigaDoc == null)
+			cauRigaDoc = trovaCausaleRigaDocVen(rigaOrdine, causaliRigaDoc, false);
+		isTrovata = (cauRigaDoc != null) ? true : false;
+		//Fix 16542 fine
+		if (!isTrovata) {
+			cauRigaDoc = null;
+		}
+		return cauRigaDoc;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public CausaleRigaDocVen trovaCausaleRigaDocVen(OrdineVenditaRigaPrm rigaOrdine, List causaliRigaDoc, boolean conTestSuGestioneCatalogo) {
+		CausaleRigaDocVen cauRigaDoc = null;
+		boolean isTrovata = false;
+		boolean isForzaControllo = false;
+		CausaleRigaOrdVen cauRigaOrd = (CausaleRigaOrdVen) rigaOrdine.getCausaleRiga();
+		Iterator iterDoc = causaliRigaDoc.iterator();
+		if (cauRigaOrd != null) {
+			if (rigaOrdine.getTipoRiga() == TipoRiga.SPESE_MOV_VALORE) {
+				CausaleRigaDocVen cauDaSpesa = null;
+				if (rigaOrdine.getSpesa() != null) {
+					cauDaSpesa = (CausaleRigaDocVen) rigaOrdine.getSpesa().
+							getCausaleRigaDocVen();
+				}
+				if (cauDaSpesa != null) {
+					while (iterDoc.hasNext() && !isTrovata) {
+						CausaleRigaDocVen cau = (CausaleRigaDocVen) iterDoc.next();
+						if (cauDaSpesa.getKey().equals(cau.getKey())) {
+							cauRigaDoc = cau;
+							isTrovata = true;
+						}
+					}
+					if (!isTrovata) {
+						isForzaControllo = true;
+					}
+				}
+				else {
+					isForzaControllo = true;
+				}
+			}
+			iterDoc = causaliRigaDoc.iterator();
+			if (rigaOrdine.getTipoRiga() == TipoRiga.OMAGGIO) {
+				boolean isROOmaggioSA = rigaOrdine.getCausaleRiga().isOmaggioScontoArticolo();
+				while (iterDoc.hasNext() && !isTrovata) {
+					CausaleRigaDocVen cau = (CausaleRigaDocVen) iterDoc.next();
+					if (cau.getTipoRiga() == TipoRiga.OMAGGIO) {
+						if (isROOmaggioSA == cau.isOmaggioScontoArticolo()) {
+							Iterator i = cau.getCausaliRigaOrdine().iterator();
+							while (i.hasNext() && !isTrovata) {
+								CausaleRigaOrdVen cro = (CausaleRigaOrdVen) i.next();
+								if (cro.getKey().equals(cauRigaOrd.getKey())) {
+									if (!conTestSuGestioneCatalogo || (cro.isCatalogoEstPerOrdineAbl() == cau.isCatalogoEstPerOrdineAbl()) )
+									{
+										isTrovata = true;
+										cauRigaDoc = cau;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			else if (rigaOrdine.getTipoRiga() == TipoRiga.MERCE ||
+					rigaOrdine.getTipoRiga() == TipoRiga.SERVIZIO ||
+					isForzaControllo) {
+				while (iterDoc.hasNext() && !isTrovata) {
+					cauRigaDoc = (CausaleRigaDocVen) iterDoc.next();
+					List causaliRigaOrd = cauRigaDoc.getCausaliRigaOrdine();
+					Iterator iterOrd = causaliRigaOrd.iterator();
+					while (iterOrd.hasNext() && !isTrovata) {
+						CausaleRigaOrdVen cau = (CausaleRigaOrdVen) iterOrd.next();
+						if (cau.getKey().equals(cauRigaOrd.getKey())) {
+							if (!conTestSuGestioneCatalogo || (cau.isCatalogoEstPerOrdineAbl() == cauRigaDoc.isCatalogoEstPerOrdineAbl()))
+							{
+								isTrovata = true;
+							}
+						}
+					}
+				}
+			}
+		}
+		if (!isTrovata && isForzaControllo) {
+			Iterator iterDocUltima = causaliRigaDoc.iterator();
+			while (iterDocUltima.hasNext()) {
+				cauRigaDoc = (CausaleRigaDocVen) iterDocUltima.next();
+				if (cauRigaDoc.getTipoRiga() == rigaOrdine.getTipoRiga()) {
+					isTrovata = true;
+					break;
+				}
+			}
+		}
+		return (isTrovata) ? cauRigaDoc : null;
 	}
 
 	@Override

@@ -19,13 +19,25 @@ import it.thera.thip.base.articolo.Articolo;
  */
 
 public class YEvasioneUdsVenRiga extends it.softre.thip.vendite.uds.YEvasioneUdsVenRiga {
+	
+	protected String iSerie;
+	
+	public String getSerie() {
+		return iSerie;
+	}
 
+	public void setSerie(String iSerie) {
+		this.iSerie = iSerie;
+	}
+	
 	/**
 	 * Se l'articolo e' gestito a cataste  allora devo bloccare la riga perche' non puo' essere modificata
 	 */
 	@Override
 	public boolean isSelezionabile() {
 		boolean ret = super.isSelezionabile();
+		if(getUdsVendita() != null) //.Se viene dall'UDS e' bloccata
+			return false;
 		Articolo articolo = null;
 		if(getTipoRiga() == RIGA_UDS) {
 			articolo = getRigaUdsVendita().getRelarticolo();

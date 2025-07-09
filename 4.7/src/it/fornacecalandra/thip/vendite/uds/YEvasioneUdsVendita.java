@@ -7,7 +7,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import it.fornacecalandra.thip.vendite.ordineVE.YOrdineVenditaRigaPrm;
 import it.softre.thip.vendite.uds.YEvasioneUdsVenRiga;
+import it.softre.thip.vendite.uds.YUdsVenRig;
 import it.thera.thip.base.articolo.Articolo;
 import it.thera.thip.vendite.ordineVE.OrdineVendita;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaPrm;
@@ -42,6 +44,7 @@ public class YEvasioneUdsVendita extends it.softre.thip.vendite.uds.YEvasioneUds
 			if(riga.getRigaOrdine() != null) {
 				righeOrdineEstratte.put(riga.getRigaOrdine().getKey(), riga.getRigaOrdine().getKey());
 			}
+			riga.setRigaEstratta(true);
 		}
 		iterator = righeEstratte.iterator();
 		while(iterator.hasNext()) {
@@ -67,6 +70,13 @@ public class YEvasioneUdsVendita extends it.softre.thip.vendite.uds.YEvasioneUds
 		}
 		righeEstratte.addAll(newRigheEstratte);
 		return righeEstratte;
+	}
+
+	@Override
+	protected void assegnaDatiRiga(YEvasioneUdsVenRiga riga, YUdsVenRig udsVenRig, OrdineVenditaRigaPrm ordVenRig) {
+		super.assegnaDatiRiga(riga, udsVenRig, ordVenRig);
+		((it.fornacecalandra.thip.vendite.uds.YEvasioneUdsVenRiga)riga).setSerie(
+				((YOrdineVenditaRigaPrm)ordVenRig).getSerie() != null ? ((YOrdineVenditaRigaPrm)ordVenRig).getSerie() : "");
 	}
 
 	protected static boolean isArticoloGestitoCataste(Articolo articolo) {

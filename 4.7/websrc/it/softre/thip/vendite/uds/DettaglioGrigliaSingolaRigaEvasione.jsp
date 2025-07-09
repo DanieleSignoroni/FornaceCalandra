@@ -205,6 +205,12 @@ label.write(out); }%>
  label.setParent(YEvasioneUdsVenRigaForm); 
 label.write(out); }%> 
 </label></td>
+ <!-- 
+ <% 
+ String src_jsp = "/"+Factory.getName("it/softre/thip/vendite/uds/IntestazioneGrigliaSingolaRigaEvasione.jsp",Factory.JSP); 
+ request.setAttribute("YEvasioneUdsVenRigaForm",YEvasioneUdsVenRigaForm);
+ %>  %> -->
+ <jsp:include page="<%=src_jsp%>"></jsp:include>
   </tr>
 <%     
 String prefixDettaglioDisp = "DettaglioDisp";
@@ -345,6 +351,11 @@ while (myRighe.hasNext()) {
       <input <%=strDisabled%> id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaSaldata', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
       <%       }       %>
     </td>
+      <!-- <%   Random random = new Random(System.currentTimeMillis()+session.getCreationTime());
+  	long  randomKey = random.nextLong();
+  	request.setAttribute(Long.toString(randomKey),riga);
+  	src_jsp = "/"+Factory.getName("it/softre/thip/vendite/uds/SoftreDettaglioGrigliaSingolaRigaEvasione.jsp",Factory.JSP) + "?thDocVenRigaPrm="+randomKey+"&thDocVenRigaPrmIdx="+idx;   %> -->
+  	<jsp:include page="<%=src_jsp%>"></jsp:include>
   </tr>
   <tr class="<%=cssTRrigaEstrazione%>">
     <% String cellDescrArticoloClass = "cellDescrArticolo";%>
