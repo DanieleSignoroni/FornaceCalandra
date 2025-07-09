@@ -348,7 +348,7 @@ while (myRighe.hasNext()) {
       <%       if (riga.isSaldoAutomatico()) {       %>
       <input disabled id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
       <%       }       else {       %>
-      <input <%=strDisabled%> id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaSaldata', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
+      <input id="RigaSaldata<%=idx%>" name="RigaSaldata<%=idx%>" onclick="selezionaRiga(this, 'document.DettaglioGrigliaSingolaRigaEvasioneForm', 'RigaSaldata', 'RigaEstratta')" type="checkbox" <%=(riga.isRigaSaldata()?"checked":"")%>>
       <%       }       %>
     </td>
       <!-- <%   Random random = new Random(System.currentTimeMillis()+session.getCreationTime());

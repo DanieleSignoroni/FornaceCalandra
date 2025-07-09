@@ -16,5 +16,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/SQLServer"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/PTH_5.1.0"/>
+	<classpathentry kind="lib" path="K:/Thip/thip_jars/pdfbox-2.0.23.jar"/>
 	<classpathentry kind="output" path="lib"/>
 </classpath>
