@@ -15,10 +15,10 @@ import com.thera.thermfw.collector.BODataCollector;
 import com.thera.thermfw.common.ErrorMessage;
 import com.thera.thermfw.persist.Factory;
 import com.thera.thermfw.persist.KeyHelper;
+import com.thera.thermfw.persist.PersistentObject;
 import com.thera.thermfw.web.ServletEnvironment;
 import com.thera.thermfw.web.WebForm;
 
-import it.softre.thip.vendite.uds.YAlertUtilsVendite;
 import it.softre.thip.vendite.uds.YUdsVendita;
 import it.thera.thip.base.comuniVenAcq.web.EvasioneOrdiniConst;
 import it.thera.thip.base.documenti.web.DocumentoCambiaJSP;
@@ -58,7 +58,7 @@ public class YEvasioneUdsVendita extends DocumentoCambiaJSP implements EvasioneO
 	@Override
 	public void eseguiAzioneSpecifica(ServletEnvironment se, ClassADCollection cadc, DocumentoDataCollector docBODC, DocumentoDatiSessione datiSessione) throws ServletException, IOException, SQLException {
 		String azione = getAzione(se);
-		if(azione.equals(EVADI_UDS)) {
+		if(azione.equals(EVADI_UDS) || azione.equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) {
 			evadiUds(se,cadc,docBODC,datiSessione);
 		}else if(azione.equals(CONFERMA_EVASIONE)) {
 			confermaEvasione(se,cadc,docBODC,datiSessione);
@@ -162,38 +162,36 @@ public class YEvasioneUdsVendita extends DocumentoCambiaJSP implements EvasioneO
 			se.sendRequest(getServletContext(), "com/thera/thermfw/common/InfoAreaHandler.jsp", false);
 			return;
 		}
-		String cliente = getCliente(chiaviSel[0]);
+		List<YUdsVendita> list = recuperaUdsVenditaDaChiavi(chiaviSel);
+		String cliente = list.get(0).getRCliente();
 		if(chiaviSel != null) {
-			boolean isOk = YAlertUtilsVendite.checkCliente(chiaviSel);
-			if(isOk) {
-				ArrayList<String> chiaviUdsEvase = YAlertUtilsVendite.chiaviUdsEvase(chiaviSel);
-				if(!chiaviUdsEvase.isEmpty()) {
-					ErrorMessage em = new ErrorMessage("YSOFTRE001","Le seguenti UDS sono già state evase " + getMsgEvasione(chiaviUdsEvase));
-					se.addErrorMessage(em);
-				}
-			}else {
-				ErrorMessage em = new ErrorMessage("YSOFTRE001","Non e' possibile evadere UDS con clienti diversi");
+			ErrorMessage em = checkCongruenzaCliente(list);
+			if(em != null) {
 				se.addErrorMessage(em);
 			}
-			if(cliente == null) {
-				ErrorMessage em = new ErrorMessage("YSOFTRE001","Non e' possibile evadere UDS senza cliente");
+			em = checkUdsEvase(list,getAzione(se));
+			if(em != null) {
 				se.addErrorMessage(em);
 			}
-			checkChiavi(chiaviSel,se);
+			em = checkPresenzaRigheUds(list);
+			if(em != null) {
+				se.addErrorMessage(em);
+			}
 			if(se.isErrorListEmpity()) {
 				it.softre.thip.vendite.uds.YEvasioneUdsVendita udsVenBO = null;
 				udsVenBO = (it.softre.thip.vendite.uds.YEvasioneUdsVendita) docBODC.getBo();
 				completaEvasione(udsVenBO,se);
+				udsVenBO.setAzione(getAzione(se));
 				docBODC.setBo(udsVenBO);
 				YDatiSessioneEvasioneUdsVendita datiSessioneEvasione = (YDatiSessioneEvasioneUdsVendita) Factory.createObject(YDatiSessioneEvasioneUdsVendita.class);
 				datiSessioneEvasione.setDocumentoBO(docBODC.getBo());
 				datiSessioneEvasione.setNavigatore(docBODC.getNavigatore());
-				datiSessioneEvasione.salvaInSessione(se);
 				datiSessioneEvasione.setIdCliente(cliente);
 				datiSessioneEvasione.setChiaviSel(chiaviSel);
 				datiSessioneEvasione.setBo(udsVenBO);
 				boolean daEstratto = (Boolean) se.getRequest().getAttribute("DaEstratto");
 				datiSessioneEvasione.setDaEstratto(daEstratto);
+				datiSessioneEvasione.salvaInSessione(se);
 				se.getRequest().setAttribute(DocumentoDataCollector.CARICA_DA_SESSIONE, "true");
 				String url = "it/softre/thip/vendite/uds/YEvasioneUdsVendita.jsp?Cliente="+cliente;
 				String params = "&" + DocumentoDatiSessione.CHIAVE_DATI_SESSIONE + "=" +(String) se.getRequest().getAttribute(DocumentoDatiSessione.CHIAVE_DATI_SESSIONE);
@@ -263,21 +261,62 @@ public class YEvasioneUdsVendita extends DocumentoCambiaJSP implements EvasioneO
 		}
 	}
 
-	private boolean checkChiavi(String[] chiaviSel, ServletEnvironment se) {
-		try {
-			for(int i = 0 ; i < chiaviSel.length; i++) {
-				YUdsVendita udsVen = (YUdsVendita)
-						YUdsVendita.elementWithKey(YUdsVendita.class, chiaviSel[i], 0);
-				if(udsVen.getRigheUDSVendita().size() == 0
-						&& !udsVen.esistonoUdsFiglieCollegate()) {
-					ErrorMessage em = new ErrorMessage("YSOFTRE001","L'UDS " + chiaviSel[i] + " non ha righe, non puo' essere evasa");
-					se.addErrorMessage(em);
+	public ErrorMessage checkPresenzaRigheUds(List<YUdsVendita> list) {
+		for(YUdsVendita uds : list) {
+			if(uds.getRigheUDSVendita().size() == 0
+					&& !uds.esistonoUdsFiglieCollegate()) {
+				return  new ErrorMessage("YSOFTRE001","L'UDS " + uds.getKey() + " non ha righe, non puo' essere evasa");
+			}
+		}
+		return null;
+	}
+
+	public ErrorMessage checkUdsEvase(List<YUdsVendita> list, String azione) {
+		for(YUdsVendita uds : list) {
+			//.Se sto lanciando l'azione di trasferimento devo controllare che l'uds
+			//.non sia stata gia' evasa o trasferita
+			if(azione.equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) {
+				if((uds.getRAnnoDocVen() != null && uds.getRNumDocVen() != null) || uds.getDocumentoVenditaTrasf() != null) {
+					return new ErrorMessage("YSOFTRE001","Non e' possibile evadere un UDS gia' evasa");
+				}
+			}else {
+				//				if(uds.getStatoEvasione() == YUdsVendita.GENERATO_DOCUMENTO || uds.getStatoEvasione() == YUdsVendita.VERSATO_A_MAGAZZINO) {
+				//					return new ErrorMessage("YSOFTRE001","Non e' possibile evadere un UDS gia' evasa");
+				//				}
+				if(uds.getRAnnoDocVen() != null && uds.getRNumDocVen() != null) {
+					return new ErrorMessage("YSOFTRE001","Non e' possibile evadere un UDS gia' evasa");
 				}
 			}
-		}catch (SQLException e) {
-			e.printStackTrace(Trace.excStream);
 		}
-		return false;
+		return null;
+	}
+
+	public ErrorMessage checkCongruenzaCliente(List<YUdsVendita> list) {
+		if(list.size() == 0)
+			return new ErrorMessage("BAS0000000");
+		String firstCliente = list.get(0).getRCliente();
+		if(firstCliente == null)
+			return new ErrorMessage("BAS0000000");
+		for(YUdsVendita uds : list) {
+			if(uds.getRCliente() == null) {
+				return new ErrorMessage("BAS0000000");
+			}else if(!uds.getRCliente().equals(firstCliente)){
+				return new ErrorMessage("YSOFTRE001","Non e' possibile evadere UDS con clienti diversi");
+			}
+		}
+		return null;
+	}
+
+	public List<YUdsVendita> recuperaUdsVenditaDaChiavi(String[] keys){
+		List<YUdsVendita> list = new ArrayList<YUdsVendita>();
+		for(String key : keys) {
+			try {
+				list.add((YUdsVendita) YUdsVendita.elementWithKey(YUdsVendita.class, key, PersistentObject.NO_LOCK));
+			} catch (SQLException e) {
+				e.printStackTrace(Trace.excStream);
+			}
+		}
+		return list;
 	}
 
 	public void executeJSOpenAction(ServletEnvironment se, String url, DocumentoDataCollector docBODC) {

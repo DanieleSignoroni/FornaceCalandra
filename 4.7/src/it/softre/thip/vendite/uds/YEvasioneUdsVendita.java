@@ -27,9 +27,11 @@ import com.thera.thermfw.persist.Proxy;
 import com.thera.thermfw.persist.SQLServerJTDSNoUnicodeDatabase;
 import com.thera.thermfw.persist.TableManager;
 
+import it.softre.thip.vendite.uds.web.YUdsVenditaGridActionAdapter;
 import it.thera.thip.base.articolo.Articolo;
 import it.thera.thip.base.articolo.ArticoloVersione;
 import it.thera.thip.base.azienda.Azienda;
+import it.thera.thip.base.azienda.Magazzino;
 import it.thera.thip.base.cliente.ClienteVendita;
 import it.thera.thip.base.comuniVenAcq.GestoreCalcoloCosti;
 import it.thera.thip.base.comuniVenAcq.OrdineTestata;
@@ -117,6 +119,10 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	protected Proxy iRelCliente = new Proxy(it.thera.thip.base.cliente.ClienteVendita.class);
 
 	protected Proxy iRelNumeratore = new Proxy(Numeratore.class);
+	
+	protected Proxy iMagazzinoTrasferimento = new Proxy(it.thera.thip.base.azienda.Magazzino.class);
+
+	protected String iAzione;
 
 	protected boolean iGeneraDocumento = false;
 
@@ -292,6 +298,40 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	public void setGeneraDocumento(boolean iGeneraDocumento) {
 		this.iGeneraDocumento = iGeneraDocumento;
 	}
+	
+	public Magazzino getMagazzinoTrasferimento() {
+		return (Magazzino)iMagazzinoTrasferimento.getObject();
+	}
+
+	public void setMagazzinoTrasferimento(Magazzino iMagazzino) {
+		this.iMagazzinoTrasferimento.setObject(iMagazzino);
+	}
+
+	public String getMagazzinoTrasferimentoKey() {
+		return iMagazzinoTrasferimento.getKey();
+	}
+
+	public void setMagazzinoTrasferimentoKey(String key) {
+		iMagazzinoTrasferimento.setKey(key);
+	}
+
+	public String getIdMagazzinoTrasferimento() {
+		String key = iMagazzinoTrasferimento.getKey();
+		String rMagazzino = KeyHelper.getTokenObjectKey(key,2);
+		return rMagazzino;
+	}
+
+	public void setIdMagazzinoTrasferimento(String rMagazzino) {
+		String key = iMagazzinoTrasferimento.getKey();
+		iMagazzinoTrasferimento.setKey(KeyHelper.replaceTokenObjectKey(key , 2, rMagazzino));
+	}
+
+	public String getAzione() {
+		return iAzione;
+	}
+	public void setAzione(String iAzione) {
+		this.iAzione = iAzione;
+	}
 
 	@SuppressWarnings("rawtypes")
 	public List getRigheEstratte() throws ThipException {
@@ -428,15 +468,29 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public int save() throws SQLException {
+		List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(getChiaviSelezionate());
 		DocumentoVenditaDataCollector docBODC = (DocumentoVenditaDataCollector) Factory.createObject(DocumentoVenditaDataCollector.class);
 		docBODC.setAutoCommit(false);
 		docBODC.initialize(Factory.getName("DocumentoVendita", Factory.CLASS_HDR), true,PersistentObject.OPTIMISTIC_LOCK);
 		DocumentoVendita documentoVendita = creaDocumentoVenditaTestata(getDataDocumento(), getRCauDocTes(), getRSerie(), getRCliente(),getDataRifIntestatario(), getNumeroRifIntestatario());
 		documentoVendita.setAbilitaCheckBloccoImmissione(false);
+		if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) { //.Se e' un trasferimento setto da dove viene
+			documentoVendita.setMagazzinoTrasferimento(getMagazzinoTrasferimento());
+		}
+		String idMagazzino = null;
+		for (Iterator<YUdsVendita> iterator = testate.iterator(); iterator.hasNext();) {
+			YUdsVendita udsVen = (YUdsVendita) iterator.next();
+			if(udsVen.getRMagazzino() != null) {
+				idMagazzino = udsVen.getRMagazzino();
+			}
+		}
+		documentoVendita.setIdMagazzino(idMagazzino);
+		if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) { 
+			documentoVendita.setAbilitaCheckBloccoImmissione(false);
+		}
 		docBODC.setBo(documentoVendita);
 		int rc = docBODC.save();
 		if (rc == DocumentoVenditaDataCollector.OK) {
-			List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(getChiaviSelezionate());
 			BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
 			BigDecimal totPesoNetto = totalePesi[1];
 			BigDecimal totPesoLordo = totalePesi[0];
@@ -465,7 +519,7 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 							rigaDocumentoVE.setRigaSaldata(true);
 						}
 
-						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga.getRigheUdsAccorpate());
+						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga);
 
 						rigaDocumentoVE.save();
 
@@ -942,8 +996,7 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	 * @param oggino
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public void aggiornaAttributiDaRigaOrdine(DocumentoVenRigaPrm docVenRig, OrdineVenditaRigaPrm rigaOrdine,
-			List<YUdsVenRig> righeAccorpate) {
+	public void aggiornaAttributiDaRigaOrdine(DocumentoVenRigaPrm docVenRig, OrdineVenditaRigaPrm rigaOrdine, YEvasioneUdsVenRiga riga) {
 		try {
 			if (rigaOrdine != null) {
 				CausaleRigaDocVen cauRigaDoc = trovaCausaleRigaDocVen(rigaOrdine);
@@ -957,7 +1010,11 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 				if (rigaOrdine.getTipoRiga() == TipoRiga.OMAGGIO) {
 					docVenRig.setServizioCalcDatiVendita(false);
 				}
-				docVenRig.setMagazzino(rigaOrdine.getMagazzino());
+				YUdsVendita udsVendita = riga.getUdsVendita();
+				if(udsVendita != null && udsVendita.getRMagazzino() != null)
+					docVenRig.setIdMagazzino(udsVendita.getRMagazzino()); //.Prendo il magazzino dall'UDS se c'è
+				else
+					docVenRig.setMagazzino(rigaOrdine.getMagazzino());
 				docVenRig.setArticolo(rigaOrdine.getArticolo());
 				docVenRig.setArticoloVersSaldi(rigaOrdine.getArticoloVersSaldi());
 				docVenRig.setArticoloVersRichiesta(rigaOrdine.getArticoloVersRichiesta());
@@ -1111,7 +1168,7 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 				// if(rigaOrdine != null) {
 				// qui dovrei accorpare i lotti e creare un nuovo oggettino con la somma delle
 				// quantita' accorpate per lotto
-				List<YOggettinoRigaLottoAccorpata> righeLottoAccorpate = recuperaRigheLottoAccorpate(righeAccorpate);
+				List<YOggettinoRigaLottoAccorpata> righeLottoAccorpate = recuperaRigheLottoAccorpate(riga.getRigheUdsAccorpate());
 				Iterator iterRigheTot = righeLottoAccorpate.iterator();
 				while (iterRigheTot.hasNext()) {
 					YOggettinoRigaLottoAccorpata lotto = (YOggettinoRigaLottoAccorpata) iterRigheTot.next();
@@ -1127,7 +1184,7 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 				}
 
 				//.Vuol dire che sto evadendo una riga ordine e non UDS quindi genero i lotti a partire da quelli dell'ordine
-				if(righeAccorpate.isEmpty()) { 
+				if(riga.getRigheUdsAccorpate().isEmpty()) { 
 					Iterator iterLotti = rigaOrdine.getRigheLotto().iterator();
 					while(iterLotti.hasNext()) {
 						OrdineVenditaRigaLottoPrm rigaLottoOrdVenRig = (OrdineVenditaRigaLottoPrm) iterLotti.next();
@@ -1227,31 +1284,38 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	}
 
 	/**
-	 * DSSOF3 Metodo per aggiornare i riferimenti al Documento di Vendita sulla riga
-	 * uds.
-	 * 
+	 * DSSOF3	Metodo per aggiornare i riferimenti al Documento di Vendita sulla riga uds.
 	 * @param udsVeRig
 	 * @param docVeRig
 	 */
 	public void aggiornaRiferimentiDocumentoVenditaRigaUds(YUdsVenRig udsVeRig, DocumentoVenRigaPrm docVeRig) {
-		udsVeRig.setRAnnoDocVen(docVeRig.getTestata().getAnnoDocumento());
-		udsVeRig.setRNumDocVen(docVeRig.getTestata().getNumeroDocumento());
-		udsVeRig.setRRigaDocVen(docVeRig.getNumeroRigaDocumento());
-		if (docVeRig.getDettaglioRigaDocumento() == null) {
-			udsVeRig.setRRigaDetDocVen(docVeRig.getDettaglioRigaDocumento());
+		if(getAzione().equals(YUdsVenditaGridActionAdapter.EVADI_UDS)) {
+			udsVeRig.setRAnnoDocVen(docVeRig.getTestata().getAnnoDocumento());
+			udsVeRig.setRNumDocVen(docVeRig.getTestata().getNumeroDocumento());
+			udsVeRig.setRRigaDocVen(docVeRig.getNumeroRigaDocumento());
+			if(docVeRig.getDettaglioRigaDocumento() == null) {
+				udsVeRig.setRRigaDetDocVen(docVeRig.getDettaglioRigaDocumento());
+			}
+		}else if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) {
+			udsVeRig.setIdAnnoDocumentoTrasf(docVeRig.getTestata().getAnnoDocumento());
+			udsVeRig.setIdNumeroDocumentoTrasf(docVeRig.getTestata().getNumeroDocumento());
+			udsVeRig.setIdRigaDocumentoTrasf(docVeRig.getNumeroRigaDocumento());
 		}
 	}
 
 	/**
-	 * DSSOF3 Metodo per aggiornare i riferimenti al Documento di Vendita sulla
-	 * testata uds.
-	 * 
+	 * DSSOF3	Metodo per aggiornare i riferimenti al Documento di Vendita sulla testata uds.
 	 * @param udsVeTes
 	 * @param docVenTes
 	 */
 	public void aggiornaRiferimentiDocumentoVenditaTestataUds(YUdsVendita udsVeTes, DocumentoVendita docVenTes) {
-		udsVeTes.setRAnnoDocVen(docVenTes.getAnnoDocumento());
-		udsVeTes.setRNumDocVen(docVenTes.getNumeroDocumento());
+		if(getAzione().equals(YUdsVenditaGridActionAdapter.EVADI_UDS)) {
+			udsVeTes.setRAnnoDocVen(docVenTes.getAnnoDocumento());
+			udsVeTes.setRNumDocVen(docVenTes.getNumeroDocumento());
+		}else if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) {
+			udsVeTes.setIdAnnoDocumentoTrasf(docVenTes.getAnnoDocumento());
+			udsVeTes.setIdNumeroDocumentoTrasf(docVenTes.getNumeroDocumento());
+		}
 	}
 
 	/**
