@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import com.thera.thermfw.ad.ClassADCollection;
+import com.thera.thermfw.ad.ClassADCollectionManager;
 import com.thera.thermfw.base.Trace;
 import com.thera.thermfw.collector.BODataCollector;
 import com.thera.thermfw.common.BaseComponentsCollection;
@@ -28,7 +30,6 @@ import com.thera.thermfw.persist.SQLServerJTDSNoUnicodeDatabase;
 import com.thera.thermfw.persist.TableManager;
 
 import it.softre.thip.vendite.uds.web.YUdsVenditaGridActionAdapter;
-import it.thera.thip.base.articolo.Articolo;
 import it.thera.thip.base.articolo.ArticoloVersione;
 import it.thera.thip.base.azienda.Azienda;
 import it.thera.thip.base.azienda.Magazzino;
@@ -37,9 +38,8 @@ import it.thera.thip.base.comuniVenAcq.GestoreCalcoloCosti;
 import it.thera.thip.base.comuniVenAcq.OrdineTestata;
 import it.thera.thip.base.comuniVenAcq.TipoCostoRiferimento;
 import it.thera.thip.base.comuniVenAcq.TipoRiga;
-import it.thera.thip.base.comuniVenAcq.web.CalcoloQuantitaWeb;
-import it.thera.thip.base.comuniVenAcq.web.CalcoloQuantitaWrapper;
 import it.thera.thip.base.documenti.DocumentoBase;
+import it.thera.thip.base.documenti.web.DocumentoDataCollector;
 import it.thera.thip.base.generale.Numeratore;
 import it.thera.thip.base.generale.Serie;
 import it.thera.thip.base.generale.UnitaMisura;
@@ -55,7 +55,6 @@ import it.thera.thip.vendite.generaleVE.CausaleDocumentoVendita;
 import it.thera.thip.vendite.generaleVE.CausaleRigaDocVen;
 import it.thera.thip.vendite.generaleVE.CausaleRigaOrdVen;
 import it.thera.thip.vendite.generaleVE.PersDatiVen;
-import it.thera.thip.vendite.ordineVE.DocEvaVen;
 import it.thera.thip.vendite.ordineVE.GestoreEvasioneVendita;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaLottoPrm;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaPrm;
@@ -119,7 +118,7 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	protected Proxy iRelCliente = new Proxy(it.thera.thip.base.cliente.ClienteVendita.class);
 
 	protected Proxy iRelNumeratore = new Proxy(Numeratore.class);
-	
+
 	protected Proxy iMagazzinoTrasferimento = new Proxy(it.thera.thip.base.azienda.Magazzino.class);
 
 	protected String iAzione;
@@ -298,7 +297,7 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	public void setGeneraDocumento(boolean iGeneraDocumento) {
 		this.iGeneraDocumento = iGeneraDocumento;
 	}
-	
+
 	public Magazzino getMagazzinoTrasferimento() {
 		return (Magazzino)iMagazzinoTrasferimento.getObject();
 	}
@@ -444,6 +443,22 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 		ErrorMessage em = checkSerieCausale();
 		if (em != null)
 			errors.add(em);
+		if(isGeneraDocumento()) {
+			Iterator iterRigheEstratte;
+			try {
+				iterRigheEstratte = getRigheEstratte().iterator();
+				while (iterRigheEstratte.hasNext()) {
+					YEvasioneUdsVenRiga riga = (YEvasioneUdsVenRiga) iterRigheEstratte.next();
+					if(riga.isRigaEstratta()
+							&& (riga.getQtaDaSpedireInUMRif() == null
+							|| riga.getQtaDaSpedireInUMRif().compareTo(BigDecimal.ZERO) == 0)) {
+						errors.add(new ErrorMessage("YSOFTRE001", "Riga "+riga.getSequenza()+" qta' immessa non valida"));
+					}
+				}
+			} catch (ThipException e) {
+				e.printStackTrace(Trace.excStream);
+			}
+		}
 		return errors;
 	}
 
@@ -468,40 +483,13 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public int save() throws SQLException {
+		Map<DocumentoVenRigaPrm, YEvasioneUdsVenRiga> righeUdsDaAggiornare = new HashMap<DocumentoVenRigaPrm, YEvasioneUdsVenRiga>();
 		List<YUdsVendita> testate = recuperaListaUdsVenditaDaSelezionate(getChiaviSelezionate());
-		DocumentoVenditaDataCollector docBODC = (DocumentoVenditaDataCollector) Factory.createObject(DocumentoVenditaDataCollector.class);
-		docBODC.setAutoCommit(false);
-		docBODC.initialize(Factory.getName("DocumentoVendita", Factory.CLASS_HDR), true,PersistentObject.OPTIMISTIC_LOCK);
 		DocumentoVendita documentoVendita = creaDocumentoVenditaTestata(getDataDocumento(), getRCauDocTes(), getRSerie(), getRCliente(),getDataRifIntestatario(), getNumeroRifIntestatario());
-		documentoVendita.setAbilitaCheckBloccoImmissione(false);
-		if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) { //.Se e' un trasferimento setto da dove viene
-			documentoVendita.setMagazzinoTrasferimento(getMagazzinoTrasferimento());
-		}
-		String idMagazzino = null;
-		for (Iterator<YUdsVendita> iterator = testate.iterator(); iterator.hasNext();) {
-			YUdsVendita udsVen = (YUdsVendita) iterator.next();
-			if(udsVen.getRMagazzino() != null) {
-				idMagazzino = udsVen.getRMagazzino();
-			}
-		}
-		documentoVendita.setIdMagazzino(idMagazzino);
-		if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) { 
-			documentoVendita.setAbilitaCheckBloccoImmissione(false);
-		}
-		docBODC.setBo(documentoVendita);
+		assegnaDatiTestata(documentoVendita,testate);
+		DocumentoDataCollector docBODC = creaDocumentoVenditaTestataBODC(documentoVendita);
 		int rc = docBODC.save();
 		if (rc == DocumentoVenditaDataCollector.OK) {
-			BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
-			BigDecimal totPesoNetto = totalePesi[1];
-			BigDecimal totPesoLordo = totalePesi[0];
-
-			// Aggiorno i riferimento delle testate che sono state selezionate
-			for (YUdsVendita testata : testate) {
-				aggiornaRiferimentiDocumentoVenditaTestataUds(testata, documentoVendita);
-				testata.rendiDefinitivaUdsVendita();
-				testata.save();
-			}
-
 			Iterator iterRigheEstratte = getRigheEstratte().iterator();
 			if(!iterRigheEstratte.hasNext()) {
 				throw new ThipException(new ErrorMessage("YSOFTRE001", "Nessuna riga estratta"));
@@ -510,19 +498,37 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 					YEvasioneUdsVenRiga riga = (YEvasioneUdsVenRiga) iterRigheEstratte.next();
 					if(riga.isRigaEstratta()
 							|| (riga.getUdsVendita() != null)) {
-						YUdsVenRig rigaUds = riga.getRigaUdsVendita();
-						OrdineVenditaRigaPrm rigaOrdine = rigaUds != null ? rigaUds.getOrdineVenditaRigaObj() : riga.getRigaOrdine();
-						DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, rigaUds, riga.getQtaDaSpedireInUMRif(),rigaOrdine);
-						ricalcolaQta(rigaDocumentoVE);
+						DocumentoVenRigaPrm rigaDocumentoVE = creaDocumentoVenditaRigaPrm(documentoVendita, riga);
 
 						if(riga.isRigaSaldata()) {
 							rigaDocumentoVE.setRigaSaldata(true);
 						}
+						rigaDocumentoVE.setSalvaTestata(false);
 
-						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, rigaOrdine, riga);
+						aggiornaAttributiDaRigaOrdine(rigaDocumentoVE, riga);
 
-						rigaDocumentoVE.save();
+						DocumentoDataCollector docBODCRigaPrm = creaDocumentoVenditaRigaPrmBODC(rigaDocumentoVE);
+						int rcRig = docBODCRigaPrm.save();
+						if(rcRig == BODataCollector.OK) {
+							righeUdsDaAggiornare.put(rigaDocumentoVE, riga);
+						}else{
+							throw new ThipException(docBODCRigaPrm.getErrorList().getErrors());
+						}
 
+					}
+				}
+				if(rc == BODataCollector.OK) {
+					setKey(docBODC.getBo().getKey()); //.Setto la chiave del documento salvato
+					// Aggiorno i riferimento delle testate che sono state selezionate
+					for (YUdsVendita testata : testate) {
+						aggiornaRiferimentiDocumentoVenditaTestataUds(testata, documentoVendita);
+						testata.rendiDefinitivaUdsVendita();
+						testata.save();
+					}
+					for (Map.Entry<DocumentoVenRigaPrm, YEvasioneUdsVenRiga> entry : righeUdsDaAggiornare.entrySet()) {
+						DocumentoVenRigaPrm rigaDocumentoVE = entry.getKey();
+						YEvasioneUdsVenRiga riga = entry.getValue();
+						YUdsVenRig rigaUds = riga.getRigaUdsVendita();
 						//.Aggiorno i riferimenti del documento sull'uds se presente
 						if(rigaUds != null) {
 							aggiornaRiferimentiDocumentoVenditaRigaUds(rigaUds, rigaDocumentoVE);
@@ -539,17 +545,6 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 							rigaUdsAccorpata.save();
 						}
 					}
-				}
-
-				documentoVendita.setPesoLordo(totPesoLordo);
-				documentoVendita.setPesoNetto(totPesoNetto);
-				documentoVendita.setRicalcolaPesiEVolume(false);
-				documentoVendita.setNumeroColli(testate.size()); // aggiungere numero colli...sono le chiavi selezionate
-
-				docBODC.setAutoCommit(true); //.Accendo l'autoCommit/rollback
-				rc = docBODC.save();
-				if(rc == BODataCollector.OK) {
-					setKey(docBODC.getBo().getKey()); //.Setto la chiave del documento salvato
 				}else {
 					throw new ThipException(docBODC.getErrorList().getErrors());
 				}
@@ -558,6 +553,74 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 			throw new ThipException(docBODC.getErrorList().getErrors());
 		}
 		return 1;
+	}
+
+	protected void assegnaDatiTestata(DocumentoVendita documentoVendita, List<YUdsVendita> testate) {
+		if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) { //.Se e' un trasferimento setto da dove viene
+			documentoVendita.setMagazzinoTrasferimento(getMagazzinoTrasferimento());
+		}
+		String idMagazzino = null;
+		for (Iterator<YUdsVendita> iterator = testate.iterator(); iterator.hasNext();) {
+			YUdsVendita udsVen = (YUdsVendita) iterator.next();
+			if(udsVen.getRMagazzino() != null) {
+				idMagazzino = udsVen.getRMagazzino();
+			}
+		}
+		documentoVendita.setIdMagazzino(idMagazzino);
+		if(getAzione().equals(YUdsVenditaGridActionAdapter.TRASFERISCI_UDS)) { 
+			documentoVendita.setAbilitaCheckBloccoImmissione(false);
+		}
+		documentoVendita.setAbilitaCheckBloccoImmissione(false);
+		BigDecimal[] totalePesi = recuperaTotalePesiDaTestate(testate);
+		BigDecimal totPesoNetto = totalePesi[1];
+		BigDecimal totPesoLordo = totalePesi[0];
+		documentoVendita.setPesoLordo(totPesoLordo);
+		documentoVendita.setPesoNetto(totPesoNetto);
+		documentoVendita.setRicalcolaPesiEVolume(false);
+		documentoVendita.setNumeroColli(testate.size()); // aggiungere numero colli...sono le chiavi selezionate
+		documentoVendita.setSalvaRighe(false);
+	}
+
+	public DocumentoDataCollector creaDocumentoVenditaTestataBODC(DocumentoVendita dv) {
+		try {
+			String className = "DocumentoVendita";
+			ClassADCollection cadc = ClassADCollectionManager.collectionWithName(className);
+			String collectorName = cadc.getBODataCollector();
+			if (collectorName == null) {
+				collectorName = DocumentoDataCollector.class.getName();
+			}
+			DocumentoDataCollector bo = (DocumentoDataCollector) Factory.createObject(collectorName);
+			bo.initialize(className);
+			bo.setAutoCommit(false);
+			bo.setBo(dv);
+			bo.loadAttValue();
+			bo.impostaSecondoCausale();
+			return bo;
+		}catch (Exception e) {
+			e.printStackTrace(Trace.excStream);
+		}
+		return null;
+	}
+
+	public DocumentoDataCollector creaDocumentoVenditaRigaPrmBODC(DocumentoVenRigaPrm dvr) {
+		try {
+			String className = "DocumentoVenditaRigaPrm";
+			ClassADCollection cadc = ClassADCollectionManager.collectionWithName(className);
+			String collectorName = cadc.getBODataCollector();
+			if (collectorName == null) {
+				collectorName = DocumentoDataCollector.class.getName();
+			}
+			DocumentoDataCollector bo = (DocumentoDataCollector) Factory.createObject(collectorName);
+			bo.initialize(className);
+			bo.setAutoCommit(false);
+			bo.setBo(dvr);
+			bo.loadAttValue();
+			bo.impostaSecondoCausale();
+			return bo;
+		}catch (Exception e) {
+			e.printStackTrace(Trace.excStream);
+		}
+		return null;
 	}
 
 	@Override
@@ -955,35 +1018,41 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	 * @param rigaOrdine
 	 * @return
 	 */
-	public DocumentoVenRigaPrm creaDocumentoVenditaRigaPrm(DocumentoVendita docVenTes, YUdsVenRig udsVeRig,
-			BigDecimal quantita, OrdineVenditaRigaPrm rigaOrdine) {
+	public DocumentoVenRigaPrm creaDocumentoVenditaRigaPrm(DocumentoVendita docVenTes, YEvasioneUdsVenRiga riga) {
 		DocumentoVenRigaPrm docVenRig = (DocumentoVenRigaPrm) Factory.createObject(DocumentoVenRigaPrm.class);
 		docVenRig.setIdAzienda(Azienda.getAziendaCorrente());
 		docVenRig.setTestata(docVenTes);
-		// La causale della riga documento deve venire dalla causale riga ordine come da
-		// evasione standard
-		if (rigaOrdine != null) {
-			// Percio' cerco la causale con i metodi standard instanziando questa classe
-			DocEvaVen forCausale = (DocEvaVen) Factory.createObject(DocEvaVen.class);
-			forCausale.setIdAzienda(Azienda.getAziendaCorrente());
-			forCausale.setCausale(docVenTes.getCausale());
-			CausaleRigaDocVen cau = forCausale.trovaCausaleRigaDocVen(rigaOrdine);
+		YUdsVenRig udsVenRig = riga.getRigaUdsVendita();
+		if(udsVenRig != null) {
+			docVenRig.setRAnnoOrd(udsVenRig.getRAnnoOrdVen());
+			docVenRig.setRNumeroOrd(udsVenRig.getRNumOrdVen());
+			docVenRig.setRRigaOrd(udsVenRig.getRRigaOrdVen());
+			docVenRig.setRDetRigaOrd(udsVenRig.getRRigaDetOrdVen() != null ? udsVenRig.getRRigaDetOrdVen() : 0);
+		}else {
+			docVenRig.setRAnnoOrd(riga.getRigaOrdine().getAnnoDocumento());
+			docVenRig.setRNumeroOrd(riga.getRigaOrdine().getNumeroDocumento());
+			docVenRig.setRRigaOrd(riga.getRigaOrdine().getNumeroRigaDocumento());
+			docVenRig.setRDetRigaOrd(riga.getRigaOrdine().getDettaglioRigaDocumento());
+		}
+		if (docVenRig.getRigaOrdine() != null) {
+			CausaleRigaDocVen cau = trovaCausaleRigaDocVen((OrdineVenditaRigaPrm) docVenRig.getRigaOrdine());
 			if (cau != null) {
 				docVenRig.setCausaleRiga(cau);
 			}
-		} else { // Non capitera' praticamente mai
+		} else {
 			docVenRig.setIdCauRig(docVenTes.getCausale().getCausaleRigaDocumVenKey());
 		}
 		docVenRig.completaBO();
-		docVenRig.setIdArticolo(udsVeRig != null ? udsVeRig.getRArticolo() : rigaOrdine.getIdArticolo());
+		docVenRig.setIdArticolo(udsVenRig != null ? udsVenRig.getRArticolo() : docVenRig.getRigaOrdine().getIdArticolo());
 		docVenRig.cambiaArticolo(docVenRig.getArticolo(), docVenRig.getConfigurazione(), false);
 		UnitaMisura um = docVenRig.getArticolo().getUMDefaultVendita();
 		docVenRig.setUMRif(um);
-		docVenRig.setQtaInUMVen(quantita);
-		docVenRig.setQtaInUMPrm(quantita);
-		docVenRig.setIdEsternoConfig(udsVeRig != null ? udsVeRig.getRConfig() : rigaOrdine.getIdEsternoConfig());
-		docVenRig.setIdVersioneRcs(udsVeRig != null ? udsVeRig.getRVersione() : rigaOrdine.getIdVersioneRcs());
-		// ricalcolaQta(docVenRig);
+		docVenRig.setQtaInUMVen(riga.getQtaDaSpedireInUMRif());
+		BigDecimal qtaInUmPrm = docVenRig.getArticolo().convertiUM(riga.getQtaDaSpedireInUMRif(), um, docVenRig.getUMPrm(), docVenRig.getArticoloVersRichiesta());
+		if(qtaInUmPrm != null)
+			docVenRig.setQtaInUMPrm(qtaInUmPrm);
+		docVenRig.setIdEsternoConfig(udsVenRig != null ? udsVenRig.getRConfig() : docVenRig.getRigaOrdine().getIdEsternoConfig());
+		docVenRig.setIdVersioneRcs(udsVenRig != null ? udsVenRig.getRVersione() : docVenRig.getRigaOrdine().getIdVersioneRcs());
 		return docVenRig;
 	}
 
@@ -996,13 +1065,13 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 	 * @param oggino
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public void aggiornaAttributiDaRigaOrdine(DocumentoVenRigaPrm docVenRig, OrdineVenditaRigaPrm rigaOrdine, YEvasioneUdsVenRiga riga) {
+	public void aggiornaAttributiDaRigaOrdine(DocumentoVenRigaPrm docVenRig, YEvasioneUdsVenRiga riga) {
 		try {
+			OrdineVenditaRigaPrm rigaOrdine = (OrdineVenditaRigaPrm) docVenRig.getRigaOrdine();
 			if (rigaOrdine != null) {
-				CausaleRigaDocVen cauRigaDoc = trovaCausaleRigaDocVen(rigaOrdine);
+				CausaleRigaDocVen cauRigaDoc = trovaCausaleRigaDocVen((OrdineVenditaRigaPrm) docVenRig.getRigaOrdine());
 				if(cauRigaDoc != null)
 					docVenRig.setCausaleRiga(cauRigaDoc);
-				docVenRig.setRigaOrdine(rigaOrdine);
 				docVenRig.setRRigaOrd(rigaOrdine.getNumeroRigaDocumento());
 				docVenRig.setSpecializzazioneRiga(rigaOrdine.getSpecializzazioneRiga());
 				docVenRig.setSequenzaRiga(rigaOrdine.getSequenzaRiga());
@@ -1202,41 +1271,6 @@ public class YEvasioneUdsVendita extends DocumentoBase {
 				}
 			}
 			// }
-		} catch (Exception e) {
-			e.printStackTrace(Trace.excStream);
-		}
-	}
-
-	/**
-	 * DSSOF3 Metodo per ricalcolare la qta in UMVen e UMRif in base alle unità di
-	 * misura, copiato lo STD.
-	 * 
-	 * @param riga
-	 */
-	public void ricalcolaQta(DocumentoVenRigaPrm riga) {
-		try {
-			UnitaMisura umRif = getUnitaMisura(riga.getIdUMRif());
-			UnitaMisura umPrm = getUnitaMisura(riga.getIdUMPrm());
-			UnitaMisura umSec = getUnitaMisura(riga.getIdUMSec());
-			UnitaMisura umOrigine = UnitaMisura.getUM(riga.getIdUMRif());
-			Articolo articolo = (Articolo) riga.getArticolo();
-			BigDecimal quant = riga.getQtaInUMPrm() != null ? riga.getQtaInUMPrm() : new BigDecimal(0);
-			String idVersione = riga.getIdVersioneSal() != null ? riga.getIdVersioneSal().toString() : "";
-			ArticoloVersione articoloVersione = getArticoloVersione(Azienda.getAziendaCorrente(),
-					articolo.getIdArticolo(), idVersione);
-			String dominio = "V";
-			String siglaUMOrigin = "R";
-			boolean rRicalcoloQta = true;
-			String rIdUMDestinazione = riga.getIdUMPrm();
-			String rSiglaUMDestinazione = "P";
-			String rFlagRigaLotto = "R";
-			String selectedRow = null;
-			CalcoloQuantitaWeb cqw = CalcoloQuantitaWrapper.get().calcolaQuantita(articolo, articoloVersione, quant,
-					siglaUMOrigin, dominio, umOrigine, umRif, umPrm, umSec, rRicalcoloQta, rIdUMDestinazione,
-					rSiglaUMDestinazione, rFlagRigaLotto, selectedRow);
-			String qtaPrmMagStr = cqw.getQuantRigaUMPrmMag().replace(",", ".");
-			BigDecimal qtaPrmMag = new BigDecimal(qtaPrmMagStr);
-			riga.getQtaAttesaEvasione().setQuantitaInUMRif(qtaPrmMag);
 		} catch (Exception e) {
 			e.printStackTrace(Trace.excStream);
 		}

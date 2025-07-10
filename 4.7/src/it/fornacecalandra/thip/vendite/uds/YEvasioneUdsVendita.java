@@ -11,6 +11,9 @@ import it.fornacecalandra.thip.vendite.ordineVE.YOrdineVenditaRigaPrm;
 import it.softre.thip.vendite.uds.YEvasioneUdsVenRiga;
 import it.softre.thip.vendite.uds.YUdsVenRig;
 import it.thera.thip.base.articolo.Articolo;
+import it.thera.thip.base.generale.UnitaMisura;
+import it.thera.thip.vendite.documentoVE.DocumentoVenRigaPrm;
+import it.thera.thip.vendite.documentoVE.DocumentoVendita;
 import it.thera.thip.vendite.ordineVE.OrdineVendita;
 import it.thera.thip.vendite.ordineVE.OrdineVenditaRigaPrm;
 
@@ -77,6 +80,21 @@ public class YEvasioneUdsVendita extends it.softre.thip.vendite.uds.YEvasioneUds
 		super.assegnaDatiRiga(riga, udsVenRig, ordVenRig);
 		((it.fornacecalandra.thip.vendite.uds.YEvasioneUdsVenRiga)riga).setSerie(
 				((YOrdineVenditaRigaPrm)ordVenRig).getSerie() != null ? ((YOrdineVenditaRigaPrm)ordVenRig).getSerie() : "");
+	}
+
+	@Override
+	public DocumentoVenRigaPrm creaDocumentoVenditaRigaPrm(DocumentoVendita docVenTes, YEvasioneUdsVenRiga riga) {
+		DocumentoVenRigaPrm docVenRig = super.creaDocumentoVenditaRigaPrm(docVenTes, riga);
+		YUdsVenRig udsVenRig = riga.getRigaUdsVendita();
+		if(udsVenRig != null) {
+			UnitaMisura um = docVenRig.getArticolo().getUMDefaultVendita();
+			docVenRig.setUMRif(um);
+			docVenRig.setQtaInUMVen(udsVenRig.getQtaPrm());
+			BigDecimal qtaInUmPrm = docVenRig.getArticolo().convertiUM(udsVenRig.getQtaPrm(), um, docVenRig.getUMPrm(), docVenRig.getArticoloVersRichiesta());
+			if(qtaInUmPrm != null)
+				docVenRig.setQtaInUMPrm(qtaInUmPrm);
+		}
+		return docVenRig;
 	}
 
 	protected static boolean isArticoloGestitoCataste(Articolo articolo) {

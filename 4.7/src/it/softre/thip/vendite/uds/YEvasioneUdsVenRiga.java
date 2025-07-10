@@ -292,17 +292,6 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 		isRigaEstratta = isOk;
 	}
 
-	public String getIdCommessa() {
-		if(getTipoRiga() == RIGA_UDS) {
-			if(getRigaUdsVendita() != null) 
-				return getRigaUdsVendita().getIdCommessa();
-		}else if(getTipoRiga() == RIGA_ORDINE) {
-			if(getRigaOrdine() != null)
-				return getRigaOrdine().getIdCommessa();
-		}
-		return "";
-	}
-
 	public String getSequenza() {
 		if(getRigaOrdine() != null)
 			return String.valueOf(getRigaOrdine().getSequenzaRiga());
@@ -316,6 +305,7 @@ public class YEvasioneUdsVenRiga extends BusinessObjectAdapter {
 	protected void aggiornaRiga(ParamRigaPrmDocEvaVen pr) {
 		this.setRigaEstratta(pr.iEstratta);
 		this.setRigaSaldata(pr.iSaldo || isSaldoAutomatico());
+		this.setQtaDaSpedireInUMRif(pr.iDaSpedireV);
 	}
 
 }

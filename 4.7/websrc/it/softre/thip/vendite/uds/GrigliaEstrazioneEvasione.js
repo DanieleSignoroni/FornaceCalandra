@@ -5,6 +5,10 @@ closeForm = function () {
   close();
 }
 
+function YEvasioneUdsVenditaOL(){
+	window.resizeTo(window.screen.availWidth,window.screen.availHeight);
+}
+
 function removeComponentFromError(s) {
 }
 

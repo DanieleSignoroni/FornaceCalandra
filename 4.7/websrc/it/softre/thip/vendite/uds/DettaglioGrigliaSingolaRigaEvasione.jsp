@@ -190,11 +190,6 @@ label.write(out); }%>
  label.setParent(YEvasioneUdsVenRigaForm); 
 label.write(out); }%> 
 </label></td>
-<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaCommessaLabel">
- <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.Commessa", null, null, null, null); 
- label.setParent(YEvasioneUdsVenRigaForm); 
-label.write(out); }%> 
-</label></td>
 <td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaSequenzaRigaOrdLabel">
  <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.SequenzaRigaOrd", null, null, null, null); 
  label.setParent(YEvasioneUdsVenRigaForm); 
@@ -337,9 +332,6 @@ while (myRighe.hasNext()) {
       <%     
       } 
       %>
-    </td>
-    <td class="cellIdCommessa">
-    	<input size="20" type="text" id="Commessa<%=idx%>" name="Commessa<%=idx%>" value="<%=riga.getIdCommessa()%>" disabled=""/>
     </td>
     <td class="cellSequenza">
     	<input size="20" type="text" id="Sequenza<%=idx%>" name="Sequenza<%=idx%>" value="<%=riga.getSequenza()%>" disabled=""/>

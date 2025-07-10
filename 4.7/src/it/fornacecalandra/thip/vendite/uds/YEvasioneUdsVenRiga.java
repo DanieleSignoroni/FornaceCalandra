@@ -19,9 +19,9 @@ import it.thera.thip.base.articolo.Articolo;
  */
 
 public class YEvasioneUdsVenRiga extends it.softre.thip.vendite.uds.YEvasioneUdsVenRiga {
-	
+
 	protected String iSerie;
-	
+
 	public String getSerie() {
 		return iSerie;
 	}
@@ -29,7 +29,18 @@ public class YEvasioneUdsVenRiga extends it.softre.thip.vendite.uds.YEvasioneUds
 	public void setSerie(String iSerie) {
 		this.iSerie = iSerie;
 	}
-	
+
+	public String getIdCommessa() {
+		if(getTipoRiga() == RIGA_UDS) {
+			if(getRigaUdsVendita() != null && getRigaUdsVendita().getIdCommessa() != null) 
+				return getRigaUdsVendita().getIdCommessa();
+		}else if(getTipoRiga() == RIGA_ORDINE) {
+			if(getRigaOrdine() != null && getRigaOrdine().getIdCommessa() != null)
+				return getRigaOrdine().getIdCommessa();
+		}
+		return "";
+	}
+
 	/**
 	 * Se l'articolo e' gestito a cataste  allora devo bloccare la riga perche' non puo' essere modificata
 	 */

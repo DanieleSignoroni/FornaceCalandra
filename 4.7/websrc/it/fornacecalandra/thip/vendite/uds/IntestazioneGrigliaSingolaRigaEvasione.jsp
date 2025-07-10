@@ -8,3 +8,8 @@ WebForm YEvasioneUdsVenRigaForm = (WebForm) request.getAttribute("YEvasioneUdsVe
  label.setParent(YEvasioneUdsVenRigaForm); 
 label.write(out); }%> 
 </label></td>
+<td class="cssIntestazioneRighe"><label class="thLabel" id="grigliaColonnaCommessaLabel">
+ <% { WebLabelSimple label = new com.thera.thermfw.web.WebLabelSimple("it.softre.thip.vendite.uds.resources.YEvasioneUdsVendita", "griglia.colonna.Commessa", null, null, null, null); 
+ label.setParent(YEvasioneUdsVenRigaForm); 
+label.write(out); }%> 
+</label></td>
