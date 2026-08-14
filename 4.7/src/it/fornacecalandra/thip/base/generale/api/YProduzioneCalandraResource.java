@@ -36,4 +36,11 @@ public class YProduzioneCalandraResource extends BaseResource {
 		JSONObject response = service.prelievoLiberoMateriali(new JSONObject(payload));
 		return buildResponse((StatusType) response.get("status"),response.get("response"));
 	}
+	
+	@Path("/produzioneStruttura")
+	@POST
+	public Response registraProduzioneStruttura(String payload) {
+		JSONObject response = service.produzioneStruttura(new JSONObject(payload));
+		return buildResponse((StatusType) response.get("status"),response.get("response"));
+	}
 }

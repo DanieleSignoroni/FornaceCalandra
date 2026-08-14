@@ -23,8 +23,12 @@ import com.thera.thermfw.rs.errors.PantheraApiException;
 import it.thera.thip.base.azienda.Azienda;
 import it.thera.thip.base.documenti.StatoAvanzamento;
 import it.thera.thip.base.documenti.web.DocumentoDataCollector;
+import it.thera.thip.magazzino.documenti.DocMagBase;
+import it.thera.thip.magazzino.documenti.DocMagBaseRiga;
 import it.thera.thip.magazzino.documenti.DocMagGenerico;
 import it.thera.thip.magazzino.documenti.DocMagGenericoRiga;
+import it.thera.thip.magazzino.documenti.DocMagVersDistinta;
+import it.thera.thip.magazzino.documenti.DocMagVersDistintaRigaPrm;
 
 /**
  * <p></p>
@@ -64,7 +68,7 @@ public class YProduzioneCalandraService {
 			errors.add(new ErrorMessage("BAS0000078","Il JSON non ha un oggetto 'righe'"));
 			status = Status.BAD_REQUEST;
 		}else {
-			BODataCollector docBODC = creaDocGenTestata(payload);
+			BODataCollector docBODC = creaDocMagBase("DocMagGenerico", payload);
 			DocMagGenerico testata = (DocMagGenerico) docBODC.getBo();
 			if(testata != null) {
 				JSONArray righe = payload.getJSONArray("righe");
@@ -72,7 +76,7 @@ public class YProduzioneCalandraService {
 				for(int i = 0; i < righe.length(); i ++) {
 					JSONObject riga = righe.getJSONObject(i);
 
-					DocMagGenericoRiga docMagGenRig = creaDocGenRiga(testata, riga);
+					DocMagGenericoRiga docMagGenRig = (DocMagGenericoRiga) creaDocMagBaseRiga("DocMagGenericoRiga", testata, riga);
 					if(docMagGenRig != null) {
 						testata.getRighe().add(docMagGenRig);
 					}
@@ -95,24 +99,33 @@ public class YProduzioneCalandraService {
 		return response;
 	}
 
+	public JSONObject produzioneStruttura(JSONObject jsonObject) {
+		JSONObject response = new JSONObject();
+		JSONObject result = new JSONObject();
+		Status status = Status.OK;
+		Collection<ErrorMessage> errors = new ArrayList<>();
+
+
+		result.put("errors", ErrorUtils.getInstance().toJSON(errors));
+		response.put("response", result);
+		response.put("status", status);
+		return response;
+	}
+
 	@SuppressWarnings("unchecked")
-	protected BODataCollector creaDocGenTestata(JSONObject payload) throws PantheraApiException {
-		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector("DocMagGenerico");
+	protected BODataCollector creaDocMagBase(String className, JSONObject payload) {
+		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector(className);
 
 		int rcSS = docBODC.initSecurityServices(OpenType.NEW, true, true, true);
 		if(rcSS == BODataCollector.ERROR) {
 			return docBODC;
 		}
 
-		DocMagGenerico doc = (DocMagGenerico) docBODC.getBo();
+		DocMagBase doc = (DocMagBase) docBODC.getBo();
 
 		doc.setIdAzienda(Azienda.getAziendaCorrente());
 
-		//Parametri da prendere da causale
-		doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
-		doc.getNumeratoreHandler().setIdSerie("DG");
-		doc.setIdCau("SCP");
-		doc.setIdMagazzino(doc.getCausale().getIdMagazzino());
+		assegnaDatiDocMagPre(doc, payload);
 
 		//..Leggo eventuali dati extra
 		JSONObject payloadTestata = new JSONObject(payload.toString());
@@ -123,7 +136,10 @@ public class YProduzioneCalandraService {
 		//..In questo modo carico sul bo i dati messi nei component manager sopra
 		docBODC.setOnBORecursive();
 
+		//..Qui posso gestire l'oggetto con eventuali altre logiche
 		doc.setStatoAvanzamento(StatoAvanzamento.DEFINITIVO);
+
+		assegnaDatiDocMagPre(doc, payloadTestata);
 
 		docBODC.setBo(doc);
 		docBODC.setAutoCommit(false);
@@ -135,9 +151,9 @@ public class YProduzioneCalandraService {
 	}
 
 	@SuppressWarnings("unchecked")
-	protected DocMagGenericoRiga creaDocGenRiga(DocMagGenerico testata,JSONObject payload) throws PantheraApiException {
-		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector("DocMagGenericoRiga");
-		DocMagGenericoRiga riga = (DocMagGenericoRiga) docBODC.getBo();
+	protected DocMagBaseRiga creaDocMagBaseRiga(String className, DocMagBase testata,JSONObject payload) throws PantheraApiException {
+		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector(className);
+		DocMagBaseRiga riga = (DocMagBaseRiga) docBODC.getBo();
 
 		int rcSS = docBODC.initSecurityServices(OpenType.NEW, true, true, true);
 		if(rcSS == BODataCollector.ERROR) {
@@ -148,18 +164,15 @@ public class YProduzioneCalandraService {
 		riga.setTestata(testata);
 		riga.completaBO();
 
+		assegnaDatiDocMagBaseRigaPre(riga, testata, payload);
+
 		//..Leggo eventuali dati extra
 		readExtraData(docBODC, payload);
 
 		//..In questo modo carico sul bo i dati messi nei component manager sopra
 		docBODC.setOnBORecursive();
 
-		if(riga.getArticolo() != null) {
-			riga.setOperatoreConversioneUM(riga.getArticolo().getOperConverUM());
-			riga.setIdUMPrm(riga.getArticolo().getIdUMPrmMag());
-		}
-
-		riga.getQuantita().setQuantitaInUMPrm(riga.getQtaInUMPrm());
+		assegnaDatiDocMagBaseRigaPost(riga, testata, payload);
 
 		riga.setStatoAvanzamento(testata.getStatoAvanzamento());
 
@@ -169,6 +182,52 @@ public class YProduzioneCalandraService {
 			throw new PantheraApiException(Status.INTERNAL_SERVER_ERROR, docBODC.getErrorList().getErrors());
 		}
 		return riga;
+	}
+
+	public void assegnaDatiDocMagPre(DocMagBase doc, JSONObject payload) {
+		if(doc instanceof DocMagGenerico) {
+			doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
+			doc.getNumeratoreHandler().setIdSerie("DG");
+			doc.setIdCau("SCP");
+			doc.setIdMagazzino(doc.getCausale().getIdMagazzino());
+		}else if(doc instanceof DocMagVersDistinta) {
+			doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
+			doc.getNumeratoreHandler().setIdSerie("VD");
+			doc.setIdCau("VED");
+			doc.setIdMagazzino(doc.getCausale().getIdMagazzino());
+		}
+	}
+
+	public void assegnaDatiDocMagPost(DocMagBase doc, JSONObject payload) {
+		if(doc instanceof DocMagGenerico) {
+
+		}else if(doc instanceof DocMagVersDistinta) {
+
+		}
+	}
+
+	public void assegnaDatiDocMagBaseRigaPre(DocMagBaseRiga riga, DocMagBase testata, JSONObject payload) {
+		//causali ??
+		if(riga instanceof DocMagGenericoRiga) {
+
+		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
+
+		}
+	}
+
+	public void assegnaDatiDocMagBaseRigaPost(DocMagBaseRiga riga, DocMagBase testata, JSONObject payload) {
+		if(riga.getArticolo() != null) {
+			riga.setOperatoreConversioneUM(riga.getArticolo().getOperConverUM());
+			riga.setIdUMPrm(riga.getArticolo().getIdUMPrmMag());
+		}
+
+		riga.getQuantita().setQuantitaInUMPrm(riga.getQtaInUMPrm());
+
+		if(riga instanceof DocMagGenericoRiga) {
+
+		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
+
+		}
 	}
 
 	public void readExtraData(BODataCollector boDC, JSONObject payload) throws PantheraApiException{
