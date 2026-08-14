@@ -1,0 +1,2 @@
+INSERT INTO <SCH><THIP>RISORSE_REST (ID, DESCRIZIONE, CLASSE_RISORSA, RISORSA_ATTIVA, LOG, STAMPA_HEADER, STAMPA_BODY, MAX_BODY_SIZE, R_UTENTE_CRZ, TIMESTAMP_CRZ, R_UTENTE_AGG, TIMESTAMP_AGG) VALUES ('YPRODUZIONE_CALANDRA', 'Risorsa per gestire interfacciamento con produzione di Calandra', 'it.fornacecalandra.thip.base.generale.api.YProduzioneCalandraResource', 'Y', 'Y', 'Y', 'Y', null, <USER>, CURRENT_TIMESTAMP, <USER>, CURRENT_TIMESTAMP);
+
