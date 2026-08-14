@@ -14,6 +14,7 @@ import com.thera.thermfw.base.TimeUtils;
 import com.thera.thermfw.collector.ApiInfo;
 import com.thera.thermfw.collector.BODataCollector;
 import com.thera.thermfw.common.ErrorMessage;
+import com.thera.thermfw.gui.cnr.OpenType;
 import com.thera.thermfw.persist.Factory;
 import com.thera.thermfw.persist.KeyHelper;
 import com.thera.thermfw.rs.errors.ErrorUtils;
@@ -97,6 +98,12 @@ public class YProduzioneCalandraService {
 	@SuppressWarnings("unchecked")
 	protected BODataCollector creaDocGenTestata(JSONObject payload) throws PantheraApiException {
 		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector("DocMagGenerico");
+
+		int rcSS = docBODC.initSecurityServices(OpenType.NEW, true, true, true);
+		if(rcSS == BODataCollector.ERROR) {
+			return docBODC;
+		}
+
 		DocMagGenerico doc = (DocMagGenerico) docBODC.getBo();
 
 		doc.setIdAzienda(Azienda.getAziendaCorrente());
@@ -110,7 +117,7 @@ public class YProduzioneCalandraService {
 		//..Leggo eventuali dati extra
 		JSONObject payloadTestata = new JSONObject(payload.toString());
 		payloadTestata.remove("righe");
-		
+
 		readExtraData(docBODC, payloadTestata);
 
 		//..In questo modo carico sul bo i dati messi nei component manager sopra
@@ -132,6 +139,11 @@ public class YProduzioneCalandraService {
 		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector("DocMagGenericoRiga");
 		DocMagGenericoRiga riga = (DocMagGenericoRiga) docBODC.getBo();
 
+		int rcSS = docBODC.initSecurityServices(OpenType.NEW, true, true, true);
+		if(rcSS == BODataCollector.ERROR) {
+			throw new PantheraApiException(Status.INTERNAL_SERVER_ERROR, docBODC.getErrorList().getErrors());
+		}
+
 		riga.setIdAzienda(Azienda.getAziendaCorrente());
 		riga.setTestata(testata);
 		riga.completaBO();
@@ -148,7 +160,7 @@ public class YProduzioneCalandraService {
 		}
 
 		riga.getQuantita().setQuantitaInUMPrm(riga.getQtaInUMPrm());
-		
+
 		riga.setStatoAvanzamento(testata.getStatoAvanzamento());
 
 		docBODC.setBo(riga);
