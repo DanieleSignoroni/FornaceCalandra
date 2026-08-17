@@ -1,5 +1,6 @@
 package it.fornacecalandra.thip.base.generale.api;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -11,6 +12,7 @@ import org.json.JSONObject;
 import com.thera.thermfw.ad.ClassADCollection;
 import com.thera.thermfw.ad.ClassADCollectionManager;
 import com.thera.thermfw.base.TimeUtils;
+import com.thera.thermfw.base.Trace;
 import com.thera.thermfw.collector.ApiInfo;
 import com.thera.thermfw.collector.BODataCollector;
 import com.thera.thermfw.common.ErrorMessage;
@@ -23,6 +25,9 @@ import com.thera.thermfw.rs.errors.PantheraApiException;
 import it.thera.thip.base.azienda.Azienda;
 import it.thera.thip.base.documenti.StatoAvanzamento;
 import it.thera.thip.base.documenti.web.DocumentoDataCollector;
+import it.thera.thip.base.generale.PersDatiGen;
+import it.thera.thip.datiTecnici.modpro.ModelloProduttivo;
+import it.thera.thip.datiTecnici.modpro.ModproEsplosione;
 import it.thera.thip.magazzino.documenti.DocMagBase;
 import it.thera.thip.magazzino.documenti.DocMagBaseRiga;
 import it.thera.thip.magazzino.documenti.DocMagGenerico;
@@ -99,12 +104,41 @@ public class YProduzioneCalandraService {
 		return response;
 	}
 
-	public JSONObject produzioneStruttura(JSONObject jsonObject) {
+	@SuppressWarnings("unchecked")
+	public JSONObject produzioneStruttura(JSONObject payload) {
 		JSONObject response = new JSONObject();
 		JSONObject result = new JSONObject();
 		Status status = Status.OK;
 		Collection<ErrorMessage> errors = new ArrayList<>();
 
+		if(!payload.has("righe")) {
+			errors.add(new ErrorMessage("BAS0000078","Il JSON non ha un oggetto 'righe'"));
+			status = Status.BAD_REQUEST;
+		}else {
+			BODataCollector docBODC = creaDocMagBase("DocMagVersDistinta", payload);
+			DocMagVersDistinta testata = (DocMagVersDistinta) docBODC.getBo();
+			if(testata != null) {
+				JSONArray righe = payload.getJSONArray("righe");
+
+				for(int i = 0; i < righe.length(); i ++) {
+					JSONObject riga = righe.getJSONObject(i);
+
+					DocMagVersDistintaRigaPrm docVersDistintaRig = (DocMagVersDistintaRigaPrm) creaDocMagBaseRiga("DocMagVersDistintaRigaPrm", testata, riga);
+					if(docVersDistintaRig != null) {
+						testata.getRighe().add(docVersDistintaRig);
+					}
+				}
+
+				docBODC.setAutoCommit(true);
+				int res = docBODC.save();
+				if(res == BODataCollector.ERROR) {
+					throw new PantheraApiException(Status.INTERNAL_SERVER_ERROR, docBODC.getErrorList().getErrors());
+				}else {
+					result.put("message", "Creato correttamente il documento versamento distinta: "+KeyHelper.formatKeyString(docBODC.getBo().getKey()));
+				}
+
+			}
+		}
 
 		result.put("errors", ErrorUtils.getInstance().toJSON(errors));
 		response.put("response", result);
@@ -211,7 +245,7 @@ public class YProduzioneCalandraService {
 		if(riga instanceof DocMagGenericoRiga) {
 
 		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
-
+			riga.setIdCauRig("VB1");
 		}
 	}
 
@@ -226,7 +260,23 @@ public class YProduzioneCalandraService {
 		if(riga instanceof DocMagGenericoRiga) {
 
 		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
+			((DocMagVersDistintaRigaPrm) riga).setTipoEmissione(DocMagVersDistintaRigaPrm.MODELLO_PRD);
 
+			ModelloProduttivo modPro = null;
+
+			((DocMagVersDistintaRigaPrm) riga).setDominio(ModelloProduttivo.GENERICO);
+			((DocMagVersDistintaRigaPrm) riga).setIdStabilimento(PersDatiGen.getCurrentPersDatiGen().getIdStabilimento());
+			
+			try {
+				modPro = ModproEsplosione.trovaModelloProduttivo(riga.getIdAzienda(), riga.getIdArticolo(), ((DocMagVersDistintaRigaPrm) riga).getIdStabilimento(),
+						testata.getDataDocumento(), riga.getIdCommessa(), ((DocMagVersDistintaRigaPrm) riga).getDominio());
+				if(modPro != null) {
+					((DocMagVersDistintaRigaPrm) riga).setIdModello(modPro.getIdModello());
+				}
+			} 
+			catch (SQLException e) {
+				e.printStackTrace(Trace.excStream);
+			}
 		}
 	}
 
