@@ -48,8 +48,7 @@ public class YCauRigDocPrdStruttureTM extends TableManager {
 
 	private static TableManager cInstance;
 
-	private static final String CLASS_NAME = it.fornacecalandra.thip.base.generale.YCauRigDocPrdStrutture.class
-			.getName();
+	private static final String CLASS_NAME = it.fornacecalandra.thip.base.generale.YCauRigDocPrdStrutture.class.getName();
 
 	public synchronized static TableManager getInstance() throws SQLException {
 		if (cInstance == null) {
