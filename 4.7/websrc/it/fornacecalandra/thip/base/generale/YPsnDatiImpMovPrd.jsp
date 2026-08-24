@@ -142,56 +142,74 @@
      <td height="100%"><div class="tabbed_pagine" id="tabbedPagine" style="position: relative; width: 100%; height: 100%;"> <div class="tabbed_page" id="<%=mytabbed.getTabPageId("tab1")%>" style="width:100%;height:100%;overflow:auto;"><% mytabbed.startTab("tab1"); %>
 							<table style="width: 100%;">
 								<tr>
-									<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdSerieDocPrlLibero", null); 
+									<td>
+										<fieldset style="width: fit-content;">
+											<legend>Prelievo libero materiali</legend>
+											<table>
+												<tr>
+													<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdSerieDocPrlLibero", null); 
    label.setParent(YPsnDatiImpMovPrdForm); 
 %><label class="<%=label.getClassType()%>" for="SerieDocGenPrlLibero"><%label.write(out);%></label><%}%>
-									</td>
-									<td valign="top"><% 
+													</td>
+													<td valign="top"><% 
   WebMultiSearchForm YPsnDatiImpMovPrdSerieDocGenPrlLibero =  
      new com.thera.thermfw.web.WebMultiSearchForm("YPsnDatiImpMovPrd", "SerieDocGenPrlLibero", false, false, true, 2, null, null); 
   YPsnDatiImpMovPrdSerieDocGenPrlLibero.setParent(YPsnDatiImpMovPrdForm); 
   YPsnDatiImpMovPrdSerieDocGenPrlLibero.write(out); 
 %>
 <!--<span class="multisearchform" id="SerieDocGenPrlLibero"></span>--></td>
-								</tr>
-								<tr>
-									<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdSerieDocProdStrutture", null); 
-   label.setParent(YPsnDatiImpMovPrdForm); 
-%><label class="<%=label.getClassType()%>" for="SerieDocProdStrutture"><%label.write(out);%></label><%}%>
-									</td>
-									<td valign="top"><% 
-  WebMultiSearchForm YPsnDatiImpMovPrdSerieDocProdStrutture =  
-     new com.thera.thermfw.web.WebMultiSearchForm("YPsnDatiImpMovPrd", "SerieDocProdStrutture", false, false, true, 2, null, null); 
-  YPsnDatiImpMovPrdSerieDocProdStrutture.setParent(YPsnDatiImpMovPrdForm); 
-  YPsnDatiImpMovPrdSerieDocProdStrutture.write(out); 
-%>
-<!--<span class="multisearchform" id="SerieDocProdStrutture"></span>--></td>
-								</tr>
-								<tr>
-									<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdCauDocGenPrlLibero", null); 
+												</tr>
+												<tr>
+													<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdCauDocGenPrlLibero", null); 
    label.setParent(YPsnDatiImpMovPrdForm); 
 %><label class="<%=label.getClassType()%>" for="CauDocGenPrlLibero"><%label.write(out);%></label><%}%>
-									</td>
-									<td valign="top"><% 
+													</td>
+													<td valign="top"><% 
   WebMultiSearchForm YPsnDatiImpMovPrdCauDocGenPrlLibero =  
      new com.thera.thermfw.web.WebMultiSearchForm("YPsnDatiImpMovPrd", "CauDocGenPrlLibero", false, false, true, 1, null, null); 
   YPsnDatiImpMovPrdCauDocGenPrlLibero.setParent(YPsnDatiImpMovPrdForm); 
   YPsnDatiImpMovPrdCauDocGenPrlLibero.write(out); 
 %>
 <!--<span class="multisearchform" id="CauDocGenPrlLibero"></span>--></td>
+												</tr>
+											</table>
+										</fieldset>
+									</td>
 								</tr>
 								<tr>
-									<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdCauDocProdStrutture", null); 
+									<td>
+										<fieldset style="width: fit-content;">
+											<legend>Produzione strutture</legend>
+											<table>
+												<tr>
+													<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdSerieDocProdStrutture", null); 
+   label.setParent(YPsnDatiImpMovPrdForm); 
+%><label class="<%=label.getClassType()%>" for="SerieDocProdStrutture"><%label.write(out);%></label><%}%>
+													</td>
+													<td valign="top"><% 
+  WebMultiSearchForm YPsnDatiImpMovPrdSerieDocProdStrutture =  
+     new com.thera.thermfw.web.WebMultiSearchForm("YPsnDatiImpMovPrd", "SerieDocProdStrutture", false, false, true, 2, null, null); 
+  YPsnDatiImpMovPrdSerieDocProdStrutture.setParent(YPsnDatiImpMovPrdForm); 
+  YPsnDatiImpMovPrdSerieDocProdStrutture.write(out); 
+%>
+<!--<span class="multisearchform" id="SerieDocProdStrutture"></span>--></td>
+												</tr>
+												<tr>
+													<td valign="top"><%{  WebLabelCompound label = new com.thera.thermfw.web.WebLabelCompound(null, null, "YPsnDatiImpMovPrd", "IdCauDocProdStrutture", null); 
    label.setParent(YPsnDatiImpMovPrdForm); 
 %><label class="<%=label.getClassType()%>" for="CauDocPrdStrutture"><%label.write(out);%></label><%}%>
-									</td>
-									<td valign="top"><% 
+													</td>
+													<td valign="top"><% 
   WebMultiSearchForm YPsnDatiImpMovPrdCauDocPrdStrutture =  
      new com.thera.thermfw.web.WebMultiSearchForm("YPsnDatiImpMovPrd", "CauDocPrdStrutture", false, false, true, 1, null, null); 
   YPsnDatiImpMovPrdCauDocPrdStrutture.setParent(YPsnDatiImpMovPrdForm); 
   YPsnDatiImpMovPrdCauDocPrdStrutture.write(out); 
 %>
 <!--<span class="multisearchform" id="CauDocPrdStrutture"></span>--></td>
+												</tr>
+											</table>
+										</fieldset>
+									</td>
 								</tr>
 								<tr>
 									<td colspan="2" valign="top"><!--<span class="editgrid" id="CausaliRigaDocStrutture">--><% 
@@ -213,11 +231,11 @@
 <!--</span>--></td>
 								</tr>
 								<tr>
-									<td valign="top"></td>
-									<td valign="top"></td>
-								</tr>
-								<tr>
-									<td valign="top"><% 
+									<td>
+										<table>
+											<tr>
+
+												<td valign="top"><% 
    request.setAttribute("parentForm", YPsnDatiImpMovPrdForm); 
    String CDForDatiComuniEstesi$it$thera$thip$cs$DatiComuniEstesi$jsp = "DatiComuniEstesi"; 
 %>
@@ -225,7 +243,10 @@
 <jsp:param name="CDName" value="<%=CDForDatiComuniEstesi$it$thera$thip$cs$DatiComuniEstesi$jsp%>"/> 
 </jsp:include> 
 <!--<span class="subform" id="DatiComuniEstesi"></span>--></td>
-									<td valign="top"></td>
+												<td valign="top"></td>
+											</tr>
+										</table>
+									</td>
 								</tr>
 							</table>
 					<% mytabbed.endTab(); %> 

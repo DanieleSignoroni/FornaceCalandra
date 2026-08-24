@@ -3,6 +3,7 @@ package it.fornacecalandra.thip.base.generale.api;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Vector;
 
 import javax.ws.rs.core.Response.Status;
 
@@ -22,13 +23,17 @@ import com.thera.thermfw.persist.KeyHelper;
 import com.thera.thermfw.rs.errors.ErrorUtils;
 import com.thera.thermfw.rs.errors.PantheraApiException;
 
+import it.fornacecalandra.thip.base.generale.YCauRigDocPrdStrutture;
+import it.fornacecalandra.thip.base.generale.YCauRigDocPrdStruttureTM;
 import it.fornacecalandra.thip.base.generale.YPsnDatiImpMovPrd;
+import it.thera.thip.base.articolo.Articolo;
 import it.thera.thip.base.azienda.Azienda;
 import it.thera.thip.base.documenti.StatoAvanzamento;
 import it.thera.thip.base.documenti.web.DocumentoDataCollector;
 import it.thera.thip.base.generale.PersDatiGen;
 import it.thera.thip.datiTecnici.modpro.ModelloProduttivo;
 import it.thera.thip.datiTecnici.modpro.ModproEsplosione;
+import it.thera.thip.magazzino.documenti.CausaleRigaDocVersDist;
 import it.thera.thip.magazzino.documenti.DocMagBase;
 import it.thera.thip.magazzino.documenti.DocMagBaseRiga;
 import it.thera.thip.magazzino.documenti.DocMagGenerico;
@@ -242,11 +247,10 @@ public class YProduzioneCalandraService {
 	}
 
 	public void assegnaDatiDocMagBaseRigaPre(DocMagBaseRiga riga, DocMagBase testata, JSONObject payload) {
-		//causali ??
 		if(riga instanceof DocMagGenericoRiga) {
 
 		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
-			riga.setIdCauRig("VB1");
+			riga.setCausaleRiga(trovaCausaleRigaVersamento(riga.getArticolo(), (char) payload.get("TipoMq")));
 		}
 	}
 
@@ -279,6 +283,30 @@ public class YProduzioneCalandraService {
 				e.printStackTrace(Trace.excStream);
 			}
 		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	public CausaleRigaDocVersDist trovaCausaleRigaVersamento(Articolo articolo, char tipoMq) {
+		CausaleRigaDocVersDist causale = null;
+		if(articolo != null
+				&& articolo.getIdClasseD() != null) {
+			String where = " "+YCauRigDocPrdStruttureTM.ID_AZIENDA+" = '"+Azienda.getAziendaCorrente()+"'";
+			where += " AND "+YCauRigDocPrdStruttureTM.R_CLASSE_D+" = '"+articolo.getIdClasseD()+"' ";
+			where += " AND "+YCauRigDocPrdStruttureTM.TIPO_MQ+" = '"+tipoMq+"' ";
+			Vector causali;
+			try {
+				causali = YCauRigDocPrdStrutture.retrieveList(YCauRigDocPrdStrutture.class, where, "", false);
+				if(causali.size() > 0) {
+					causale = (CausaleRigaDocVersDist) causali.get(0);
+				}
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | SQLException e) {
+				e.printStackTrace(Trace.excStream);
+			}
+			//Fallback su non significativo ??
+			/*if(causale == null)
+				causale = trovaCausaleRigaVersamento(articolo, YCauRigDocPrdStrutture.NON_SIGNIFICATIVO);*/
+		}
+		return causale;
 	}
 
 	public void readExtraData(BODataCollector boDC, JSONObject payload) throws PantheraApiException{
