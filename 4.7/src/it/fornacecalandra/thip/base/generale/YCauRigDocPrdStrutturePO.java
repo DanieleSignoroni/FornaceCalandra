@@ -42,7 +42,11 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 
 	private static YCauRigDocPrdStrutture cInstance;
 
-	protected char iTipoMq = '-';
+	public static final char NON_SIGNIFICATIVO = '-';
+	public static final char PRODOTTI = '1';
+	public static final char FATTURABILI = '2';
+
+	protected char iTipoMq = NON_SIGNIFICATIVO;
 
 	protected Proxy iClassed = new Proxy(it.thera.thip.base.articolo.ClasseD.class);
 
@@ -63,7 +67,7 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 	}
 
 	public YCauRigDocPrdStrutturePO() {
-		setTipoMq('-');
+		setTipoMq(NON_SIGNIFICATIVO);
 		setIdAzienda(Azienda.getAziendaCorrente());
 	}
 
