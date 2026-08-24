@@ -22,6 +22,7 @@ import com.thera.thermfw.persist.KeyHelper;
 import com.thera.thermfw.rs.errors.ErrorUtils;
 import com.thera.thermfw.rs.errors.PantheraApiException;
 
+import it.fornacecalandra.thip.base.generale.YPsnDatiImpMovPrd;
 import it.thera.thip.base.azienda.Azienda;
 import it.thera.thip.base.documenti.StatoAvanzamento;
 import it.thera.thip.base.documenti.web.DocumentoDataCollector;
@@ -221,13 +222,13 @@ public class YProduzioneCalandraService {
 	public void assegnaDatiDocMagPre(DocMagBase doc, JSONObject payload) {
 		if(doc instanceof DocMagGenerico) {
 			doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
-			doc.getNumeratoreHandler().setIdSerie("DG");
-			doc.setIdCau("SCP");
+			doc.getNumeratoreHandler().setIdSerie(YPsnDatiImpMovPrd.getCurrentYPsnDatiImpMovPrd().getIdSerieDocPrlLibero());
+			doc.setIdCau(YPsnDatiImpMovPrd.getCurrentYPsnDatiImpMovPrd().getIdCauDocGenPrlLibero());
 			doc.setIdMagazzino(doc.getCausale().getIdMagazzino());
 		}else if(doc instanceof DocMagVersDistinta) {
 			doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
-			doc.getNumeratoreHandler().setIdSerie("VD");
-			doc.setIdCau("VED");
+			doc.getNumeratoreHandler().setIdSerie(YPsnDatiImpMovPrd.getCurrentYPsnDatiImpMovPrd().getIdSerieDocProdStrutture());
+			doc.setIdCau(YPsnDatiImpMovPrd.getCurrentYPsnDatiImpMovPrd().getIdCauDocProdStrutture());
 			doc.setIdMagazzino(doc.getCausale().getIdMagazzino());
 		}
 	}
@@ -266,7 +267,7 @@ public class YProduzioneCalandraService {
 
 			((DocMagVersDistintaRigaPrm) riga).setDominio(ModelloProduttivo.GENERICO);
 			((DocMagVersDistintaRigaPrm) riga).setIdStabilimento(PersDatiGen.getCurrentPersDatiGen().getIdStabilimento());
-			
+
 			try {
 				modPro = ModproEsplosione.trovaModelloProduttivo(riga.getIdAzienda(), riga.getIdArticolo(), ((DocMagVersDistintaRigaPrm) riga).getIdStabilimento(),
 						testata.getDataDocumento(), riga.getIdCommessa(), ((DocMagVersDistintaRigaPrm) riga).getDominio());

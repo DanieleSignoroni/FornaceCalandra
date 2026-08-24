@@ -1,0 +1,16 @@
+<tfml>
+  <generator type="internalRowForm"/>
+  <form classHdr="YCauRigDocPrdStrutture"
+    name="YCauRigDocPrdStruttureForm"
+    errorList="no"
+		menubar="no"
+		toolbar="no"
+		submitReset="none"
+		servlet="com.thera.thermfw.web.servlet.FormActionAdapter">
+   
+    <textinput name="IdAzienda" classAD="IdAzienda"/>
+	<multisearchform name="CausaleRigaDocVrsDist" classRD="CausaleRigaDocVrsDist"/>	    
+	<multisearchform name="ClasseD" classRD="ClasseD"/>	    
+	<combobox name="TipoMq" classAD="TipoMq"/>
+  </form>
+</tfml>

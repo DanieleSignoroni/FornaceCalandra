@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE TDDML SYSTEM "../../../TDDML.dtd">
+<TDDML>
+  <!-- YPSN_DATI_IMP_MOV_PRD (YPSN_D0) -->
+  <AlterTable schema="THIPPERS" name="YPSN_DATI_IMP_MOV_PRD">
+    <AddConstraint>
+      <Constraint name="Azienda_1097759296" refschema="THIP" reftable="AZIENDE_ESTESE" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+      </Constraint>
+      <Constraint name="NumeratoreDocGenPr" refschema="THIP" reftable="NUMERATORI" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_NUM_DOC_PRL_LIBERO"/>
+      </Constraint>
+      <Constraint name="NumeratoreDocPrdSt" refschema="THIP" reftable="NUMERATORI" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_NUM_DOC_PRD_STRUTTURE"/>
+      </Constraint>
+      <Constraint name="SerieDocGenPrlLibe" refschema="THIP" reftable="NUM_SERIE" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_NUM_DOC_PRL_LIBERO"/>
+        <ColumnRef name="R_SERIE_DOC_PRL_LIBERO"/>
+      </Constraint>
+      <Constraint name="SerieDocProdStrutt" refschema="THIP" reftable="NUM_SERIE" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_NUM_DOC_PRD_STRUTTURE"/>
+        <ColumnRef name="R_SERIE_DOC_PRD_STRUTTURE"/>
+      </Constraint>
+      <Constraint name="CauDocGenPrlLibero" refschema="THIP" reftable="CAU_DOCGNR" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_CAU_DOC_GEN_PRL_LIBERO"/>
+      </Constraint>
+      <Constraint name="CauDocPrdStrutture" refschema="THIP" reftable="CAU_DOCVSD" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_CAU_DOC_PRD_STRUTTURE"/>
+      </Constraint>
+    </AddConstraint>
+  </AlterTable>
+  <!-- YCAU_RIG_DOC_PRD_STRUTTURE (YCAU_RI) -->
+  <AlterTable schema="THIPPERS" name="YCAU_RIG_DOC_PRD_STRUTTURE">
+    <AddConstraint>
+      <Constraint name="Azienda_1368247537" refschema="THIP" reftable="AZIENDE_ESTESE" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+      </Constraint>
+      <Constraint name="ClasseD_1859925715" refschema="THIP" reftable="CLASSI_D" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_CLASSE_D"/>
+      </Constraint>
+      <Constraint name="CausaleRigaDocVrsD" refschema="THIP" reftable="CAU_DOCVSD_RIG" schema="THIPPERS" ondelete="Restrict">
+        <ColumnRef name="ID_AZIENDA"/>
+        <ColumnRef name="R_CAU_RIGA_DOC_VRS"/>
+      </Constraint>
+      <Constraint name="CausaliRigaDocStru" refschema="THIPPERS" reftable="YPSN_DATI_IMP_MOV_PRD" schema="THIPPERS" ondelete="Cascade">
+        <ColumnRef name="ID_AZIENDA"/>
+      </Constraint>
+    </AddConstraint>
+  </AlterTable>
+</TDDML>

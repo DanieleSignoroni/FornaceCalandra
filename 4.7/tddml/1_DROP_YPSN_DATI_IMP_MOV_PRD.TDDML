@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE TDDML SYSTEM "../../../TDDML.dtd">
+<TDDML>
+  <DropTable name="YPSN_DATI_IMP_MOV_PRD" schema="THIPPERS">
+    <Continue/>
+  </DropTable>
+  <DropTable name="YCAU_RIG_DOC_PRD_STRUTTURE" schema="THIPPERS">
+    <Continue/>
+  </DropTable>
+</TDDML>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE TDDML SYSTEM "../../../TDDML.dtd">
+<TDDML>
+  <!-- YPSN_DATI_IMP_MOV_PRD (YPSN_D0): Pers. dati import movimenti produzi; -->
+  <CreateTable schema="THIPPERS" name="YPSN_DATI_IMP_MOV_PRD" shortname="YPSN_D0">
+    <Column name="ID_AZIENDA" shortname="ID_AZIENDA" type="char" length="3" nullable="no"/>
+    <Column name="STATO" shortname="STATO" type="char" length="1" nullable="no"/>
+    <Column name="R_UTENTE_CRZ" shortname="R_UTENTE_C" type="char" length="20" nullable="yes"/>
+    <Column name="TIMESTAMP_CRZ" shortname="TIMESTAMP_" type="timestamp" nullable="no" default="CURRENT TIMESTAMP"/>
+    <Column name="R_UTENTE_AGG" shortname="R_UTENTE_A" type="char" length="20" nullable="yes"/>
+    <Column name="TIMESTAMP_AGG" shortname="TIMESTAMP0" type="timestamp" nullable="no" default="CURRENT TIMESTAMP"/>
+    <Column name="R_NUM_DOC_PRL_LIBERO" shortname="R_NUM_DOC_" type="char" length="15" nullable="yes"/>
+    <Column name="R_NUM_DOC_PRD_STRUTTURE" shortname="R_NUM_DOC0" type="char" length="15" nullable="yes"/>
+    <Column name="R_SERIE_DOC_PRL_LIBERO" shortname="R_SERIE_DO" type="char" length="2" nullable="yes"/>
+    <Column name="R_SERIE_DOC_PRD_STRUTTURE" shortname="R_SERIE_D0" type="char" length="2" nullable="yes"/>
+    <Column name="R_CAU_DOC_GEN_PRL_LIBERO" shortname="R_CAU_DOC_" type="char" length="3" nullable="yes"/>
+    <Column name="R_CAU_DOC_PRD_STRUTTURE" shortname="R_CAU_DOC0" type="char" length="3" nullable="yes"/>
+  </CreateTable>
+  <CreateIndex schema="THIPPERS" name="YPSN_DATI_IMP__I01" tabschema="THIPPERS" tabname="YPSN_DATI_IMP_MOV_PRD" shortname="YPSN_D_I02" unique="yes">
+    <IndexCol name="ID_AZIENDA" order="Asc"/>
+  </CreateIndex>
+  <AlterTable schema="THIPPERS" name="YPSN_DATI_IMP_MOV_PRD">
+    <AddPrimaryKey>
+      <PrimaryKey>
+        <ColumnRef name="ID_AZIENDA"/>
+      </PrimaryKey>
+    </AddPrimaryKey>
+  </AlterTable>
+  <Comment>
+    <CommentTable schema="THIPPERS" name="YPSN_DATI_IMP_MOV_PRD" text="Pers. dati import movimenti produzi">
+      <CommentColumn name="ID_AZIENDA" text="Azienda"/>
+      <CommentColumn name="STATO" text="Stato"/>
+      <CommentColumn name="R_UTENTE_CRZ" text="Utente creazione"/>
+      <CommentColumn name="TIMESTAMP_CRZ" text="Timestamp creazione"/>
+      <CommentColumn name="R_UTENTE_AGG" text="Utente ultima modifica"/>
+      <CommentColumn name="TIMESTAMP_AGG" text="Timestamp ultima modifica"/>
+      <CommentColumn name="R_NUM_DOC_PRL_LIBERO" text="Numeratore prelievo libero materiali"/>
+      <CommentColumn name="R_NUM_DOC_PRD_STRUTTURE" text="Numeratore produzione strutture"/>
+      <CommentColumn name="R_SERIE_DOC_PRL_LIBERO" text="Serie prelievo libero materiali"/>
+      <CommentColumn name="R_SERIE_DOC_PRD_STRUTTURE" text="Serie produzione strutture"/>
+      <CommentColumn name="R_CAU_DOC_GEN_PRL_LIBERO" text="Causale doc. generico prel. libero"/>
+      <CommentColumn name="R_CAU_DOC_PRD_STRUTTURE" text="Causale doc. vrs. distinta"/>
+    </CommentTable>
+    <CommentIndex schema="THIPPERS" name="YPSN_DATI_IMP__I01" text="Primary Key"/>
+  </Comment>
+  <Grant schema="THIPPERS" name="YPSN_DATI_IMP_MOV_PRD"/>
+</TDDML>
