@@ -10,18 +10,20 @@
     <Column name="R_UTENTE_AGG" shortname="R_UTENTE_1" type="char" length="20" nullable="yes"/>
     <Column name="TIMESTAMP_AGG" shortname="TIMESTAMP1" type="timestamp" nullable="no" default="CURRENT TIMESTAMP"/>
     <Column name="R_CLASSE_D" shortname="R_CLASSE_D" type="char" length="10" nullable="no"/>
-    <Column name="R_CAU_RIGA_DOC_VRS" shortname="R_CAU_RIGA" type="char" length="3" nullable="yes"/>
+    <Column name="R_CAU_RIGA_DOC_VRS" shortname="R_CAU_RIGA" type="char" length="3" nullable="no"/>
     <Column name="TIPO_MQ" shortname="TIPO_MQ" type="char" length="1" nullable="no" default="-"/>
   </CreateTable>
   <CreateIndex schema="THIPPERS" name="YCAU_RIG_DOC_P_I01" tabschema="THIPPERS" tabname="YCAU_RIG_DOC_PRD_STRUTTURE" shortname="YCAU_R_I01" unique="yes">
     <IndexCol name="ID_AZIENDA" order="Asc"/>
     <IndexCol name="R_CLASSE_D" order="Asc"/>
+    <IndexCol name="R_CAU_RIGA_DOC_VRS" order="Asc"/>
   </CreateIndex>
   <AlterTable schema="THIPPERS" name="YCAU_RIG_DOC_PRD_STRUTTURE">
     <AddPrimaryKey>
       <PrimaryKey>
         <ColumnRef name="ID_AZIENDA"/>
         <ColumnRef name="R_CLASSE_D"/>
+        <ColumnRef name="R_CAU_RIGA_DOC_VRS"/>
       </PrimaryKey>
     </AddPrimaryKey>
   </AlterTable>

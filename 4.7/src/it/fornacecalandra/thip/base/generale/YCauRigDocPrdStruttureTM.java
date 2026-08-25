@@ -14,14 +14,14 @@ import it.thera.thip.cs.DatiComuniEstesiTTM;
  * <p>
  * Company: Softre Solutions<br>
  * Author: Daniele Signoroni<br>
- * Date: 24/08/2026
+ * Date: 25/08/2026
  * </p>
  */
 
 /*
  * Revisions:
  * Number   Date        Owner    Description
- * 72XXX    24/08/2026  DSSOF3   Prima stesura
+ * 72XXX    25/08/2026  DSSOF3   Prima stesura
  */
 
 public class YCauRigDocPrdStruttureTM extends TableManager {
@@ -75,7 +75,7 @@ public class YCauRigDocPrdStruttureTM extends TableManager {
 		addAttribute("IdCausaleRigaDocVrs", R_CAU_RIGA_DOC_VRS);
 
 		addComponent("DatiComuniEstesi", DatiComuniEstesiTTM.class);
-		setKeys(ID_AZIENDA + "," + R_CLASSE_D);
+		setKeys(ID_AZIENDA + "," + R_CLASSE_D + "," + R_CAU_RIGA_DOC_VRS);
 
 		setTimestampColumn("TIMESTAMP_AGG");
 		((it.thera.thip.cs.DatiComuniEstesiTTM) getTransientTableManager("DatiComuniEstesi")).setExcludedColums();

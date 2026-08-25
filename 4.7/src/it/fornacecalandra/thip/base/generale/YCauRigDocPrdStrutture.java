@@ -8,20 +8,19 @@ import com.thera.thermfw.common.ErrorMessage;
  * <p>
  * Company: Softre Solutions<br>
  * Author: Daniele Signoroni<br>
- * Date: 24/08/2026
+ * Date: 25/08/2026
  * </p>
  */
 
 /*
  * Revisions:
  * Number   Date        Owner    Description
- * 72XXX    24/08/2026  DSSOF3   Prima stesura
+ * 72XXX    25/08/2026  DSSOF3   Prima stesura
  */
 
 public class YCauRigDocPrdStrutture extends YCauRigDocPrdStrutturePO {
 
 	public ErrorMessage checkDelete() {
-
 		return null;
 	}
 

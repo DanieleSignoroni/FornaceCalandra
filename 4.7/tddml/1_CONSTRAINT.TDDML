@@ -4,7 +4,7 @@
   <!-- YPSN_DATI_IMP_MOV_PRD (YPSN_D0) -->
   <AlterTable schema="THIPPERS" name="YPSN_DATI_IMP_MOV_PRD">
     <AddConstraint>
-      <Constraint name="Azienda_1097759296" refschema="THIP" reftable="AZIENDE_ESTESE" schema="THIPPERS" ondelete="Restrict">
+      <Constraint name="Azienda_1485878287" refschema="THIP" reftable="AZIENDE_ESTESE" schema="THIPPERS" ondelete="Restrict">
         <ColumnRef name="ID_AZIENDA"/>
       </Constraint>
       <Constraint name="NumeratoreDocGenPr" refschema="THIP" reftable="NUMERATORI" schema="THIPPERS" ondelete="Restrict">
@@ -38,10 +38,10 @@
   <!-- YCAU_RIG_DOC_PRD_STRUTTURE (YCAU_RI) -->
   <AlterTable schema="THIPPERS" name="YCAU_RIG_DOC_PRD_STRUTTURE">
     <AddConstraint>
-      <Constraint name="Azienda_1368247537" refschema="THIP" reftable="AZIENDE_ESTESE" schema="THIPPERS" ondelete="Restrict">
+      <Constraint name="Azienda_1245776941" refschema="THIP" reftable="AZIENDE_ESTESE" schema="THIPPERS" ondelete="Restrict">
         <ColumnRef name="ID_AZIENDA"/>
       </Constraint>
-      <Constraint name="ClasseD_1859925715" refschema="THIP" reftable="CLASSI_D" schema="THIPPERS" ondelete="Restrict">
+      <Constraint name="ClasseD_1031484325" refschema="THIP" reftable="CLASSI_D" schema="THIPPERS" ondelete="Restrict">
         <ColumnRef name="ID_AZIENDA"/>
         <ColumnRef name="R_CLASSE_D"/>
       </Constraint>

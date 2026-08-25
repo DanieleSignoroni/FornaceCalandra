@@ -1,3 +1,4 @@
+
 package it.fornacecalandra.thip.base.generale;
 
 import java.sql.SQLException;
@@ -28,14 +29,14 @@ import it.thera.thip.magazzino.documenti.CausaleRigaDocVersDist;
  * <p>
  * Company: Softre Solutions<br>
  * Author: Daniele Signoroni<br>
- * Date: 24/08/2026
+ * Date: 25/08/2026
  * </p>
  */
 
 /*
  * Revisions:
  * Number   Date        Owner    Description
- * 72XXX    24/08/2026  DSSOF3   Prima stesura
+ * 72XXX    25/08/2026  DSSOF3   Prima stesura
  */
 
 public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements BusinessObject, Authorizable, Deletable, Child, Conflictable {
@@ -121,7 +122,6 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 	}
 
 	public void setCausalerigadocvrsdist(CausaleRigaDocVersDist causalerigadocvrsdist) {
-		String oldObjectKey = getKey();
 		String idAzienda = getIdAzienda();
 		if (causalerigadocvrsdist != null) {
 			idAzienda = KeyHelper.getTokenObjectKey(causalerigadocvrsdist.getKey(), 1);
@@ -129,9 +129,7 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 		setIdAziendaInternal(idAzienda);
 		this.iCausalerigadocvrsdist.setObject(causalerigadocvrsdist);
 		setDirty();
-		if (!KeyHelper.areEqual(oldObjectKey, getKey())) {
-			setOnDB(false);
-		}
+		setOnDB(false);
 	}
 
 	public CausaleRigaDocVersDist getCausalerigadocvrsdist() {
@@ -139,14 +137,11 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 	}
 
 	public void setCausalerigadocvrsdistKey(String key) {
-		String oldObjectKey = getKey();
 		iCausalerigadocvrsdist.setKey(key);
 		String idAzienda = KeyHelper.getTokenObjectKey(key, 1);
 		setIdAziendaInternal(idAzienda);
 		setDirty();
-		if (!KeyHelper.areEqual(oldObjectKey, getKey())) {
-			setOnDB(false);
-		}
+		setOnDB(false);
 	}
 
 	public String getCausalerigadocvrsdistKey() {
@@ -157,6 +152,7 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 		String key = iCausalerigadocvrsdist.getKey();
 		iCausalerigadocvrsdist.setKey(KeyHelper.replaceTokenObjectKey(key, 2, idCausaleRigaDocVrs));
 		setDirty();
+		setOnDB(false);
 	}
 
 	public String getIdCausaleRigaDocVrs() {
@@ -216,12 +212,14 @@ public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements 
 	public void setKey(String key) {
 		setIdAzienda(KeyHelper.getTokenObjectKey(key, 1));
 		setIdClasseD(KeyHelper.getTokenObjectKey(key, 2));
+		setIdCausaleRigaDocVrs(KeyHelper.getTokenObjectKey(key, 3));
 	}
 
 	public String getKey() {
 		String idAzienda = getIdAzienda();
 		String idClasseD = getIdClasseD();
-		Object[] keyParts = { idAzienda, idClasseD };
+		String idCausaleRigaDocVrs = getIdCausaleRigaDocVrs();
+		Object[] keyParts = { idAzienda, idClasseD, idCausaleRigaDocVrs };
 		return KeyHelper.buildObjectKey(keyParts);
 	}
 
