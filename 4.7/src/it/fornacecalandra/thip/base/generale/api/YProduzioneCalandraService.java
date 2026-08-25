@@ -200,10 +200,7 @@ public class YProduzioneCalandraService {
 			doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
 		}
 
-		//..Qui posso gestire l'oggetto con eventuali altre logiche
-		doc.setStatoAvanzamento(StatoAvanzamento.DEFINITIVO);
-
-		assegnaDatiDocMagPre(doc, payloadTestata);
+		assegnaDatiDocMagPost(doc, payloadTestata);
 
 		docBODC.loadAttValue(); //per caricare sui component manager i valori messi sul bo (serve per le check)
 		docBODC.setAutoCommit(false);
@@ -242,8 +239,6 @@ public class YProduzioneCalandraService {
 
 		assegnaDatiDocMagBaseRigaPost(riga, testata, payload);
 
-		riga.setStatoAvanzamento(testata.getStatoAvanzamento());
-
 		docBODC.loadAttValue(); //per caricare sui component manager i valori messi sul bo (serve per le check)
 		int res = docBODC.check();
 		if(res == BODataCollector.ERROR) {
@@ -268,7 +263,7 @@ public class YProduzioneCalandraService {
 
 	public void assegnaDatiDocMagPost(DocMagBase doc, JSONObject payload) {
 		if(doc instanceof DocMagGenerico) {
-
+			
 		}else if(doc instanceof DocMagVersDistinta) {
 
 		}
@@ -321,6 +316,7 @@ public class YProduzioneCalandraService {
 				e.printStackTrace(Trace.excStream);
 			}
 		}
+		riga.setStatoAvanzamento(StatoAvanzamento.DEFINITIVO);
 	}
 
 	@SuppressWarnings("rawtypes")
