@@ -250,7 +250,7 @@ public class YProduzioneCalandraService {
 		if(riga instanceof DocMagGenericoRiga) {
 
 		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
-			riga.setCausaleRiga(trovaCausaleRigaVersamento(riga.getArticolo(), (char) payload.get("TipoMq")));
+			riga.setCausaleRiga(trovaCausaleRigaVersamento(riga.getArticolo(), ((String) payload.get("TipoMq")).charAt(0)));
 		}
 	}
 
