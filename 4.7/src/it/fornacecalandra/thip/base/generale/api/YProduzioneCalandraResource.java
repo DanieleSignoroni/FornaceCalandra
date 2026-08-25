@@ -22,7 +22,7 @@ import com.thera.thermfw.rs.BaseResource;
 /*
  * Revisions:
  * Number   Date        Owner    Description
- * 72XXX    14/08/2026  DSSOF3   Prima stesura
+ * 72616    14/08/2026  DSSOF3   Prima stesura
  */
 
 @Path("/softre/produzione")

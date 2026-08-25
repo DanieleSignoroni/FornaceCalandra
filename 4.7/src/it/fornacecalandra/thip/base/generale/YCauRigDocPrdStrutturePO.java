@@ -36,7 +36,7 @@ import it.thera.thip.magazzino.documenti.CausaleRigaDocVersDist;
 /*
  * Revisions:
  * Number   Date        Owner    Description
- * 72XXX    25/08/2026  DSSOF3   Prima stesura
+ * 72616    25/08/2026  DSSOF3   Prima stesura
  */
 
 public abstract class YCauRigDocPrdStrutturePO extends EntitaAzienda implements BusinessObject, Authorizable, Deletable, Child, Conflictable {

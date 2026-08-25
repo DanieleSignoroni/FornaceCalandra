@@ -23,7 +23,7 @@ import it.thera.thip.base.azienda.Azienda;
 /*
  * Revisions:
  * Number   Date        Owner    Description
- * 72XXX    24/08/2026  DSSOF3   Prima stesura
+ * 72616    24/08/2026  DSSOF3   Prima stesura
  */
 
 public class YPsnDatiImpMovPrd extends YPsnDatiImpMovPrdPO implements Cacheable{
