@@ -37,7 +37,7 @@ public class YProduzioneCalandraResource extends BaseResource {
 		return buildResponse((StatusType) response.get("status"),response.get("response"));
 	}
 	
-	@Path("/produzioneStruttura")
+	@Path("/produzioneStrutture")
 	@POST
 	public Response registraProduzioneStruttura(String payload) {
 		JSONObject response = service.produzioneStruttura(new JSONObject(payload));

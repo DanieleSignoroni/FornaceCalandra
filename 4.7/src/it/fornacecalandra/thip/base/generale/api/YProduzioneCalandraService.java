@@ -196,6 +196,10 @@ public class YProduzioneCalandraService {
 		//..In questo modo carico sul bo i dati messi nei component manager sopra
 		docBODC.setOnBORecursive();
 
+		if(doc.getDataDocumento() == null) {
+			doc.getNumeratoreHandler().setDataDocumento(TimeUtils.getCurrentDate());
+		}
+
 		//..Qui posso gestire l'oggetto con eventuali altre logiche
 		doc.setStatoAvanzamento(StatoAvanzamento.DEFINITIVO);
 
@@ -235,7 +239,7 @@ public class YProduzioneCalandraService {
 		if(qta != null) {
 			riga.setQtaInUMPrm(qta);
 		}
-		
+
 		assegnaDatiDocMagBaseRigaPost(riga, testata, payload);
 
 		riga.setStatoAvanzamento(testata.getStatoAvanzamento());
