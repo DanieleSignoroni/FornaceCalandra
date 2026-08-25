@@ -1,5 +1,6 @@
 package it.fornacecalandra.thip.base.generale.api;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -8,6 +9,7 @@ import java.util.Vector;
 import javax.ws.rs.core.Response.Status;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.thera.thermfw.ad.ClassADCollection;
@@ -20,6 +22,7 @@ import com.thera.thermfw.common.ErrorMessage;
 import com.thera.thermfw.gui.cnr.OpenType;
 import com.thera.thermfw.persist.Factory;
 import com.thera.thermfw.persist.KeyHelper;
+import com.thera.thermfw.persist.PersistentObject;
 import com.thera.thermfw.rs.errors.ErrorUtils;
 import com.thera.thermfw.rs.errors.PantheraApiException;
 
@@ -87,7 +90,7 @@ public class YProduzioneCalandraService {
 				for(int i = 0; i < righe.length(); i ++) {
 					JSONObject riga = righe.getJSONObject(i);
 
-					DocMagGenericoRiga docMagGenRig = (DocMagGenericoRiga) creaDocMagBaseRiga("DocMagGenericoRiga", testata, riga);
+					DocMagGenericoRiga docMagGenRig = (DocMagGenericoRiga) creaDocMagBaseRiga("DocMagGenericoRiga", testata, riga, null, YCauRigDocPrdStrutture.NON_SIGNIFICATIVO);
 					if(docMagGenRig != null) {
 						testata.getRighe().add(docMagGenRig);
 					}
@@ -129,9 +132,26 @@ public class YProduzioneCalandraService {
 				for(int i = 0; i < righe.length(); i ++) {
 					JSONObject riga = righe.getJSONObject(i);
 
-					DocMagVersDistintaRigaPrm docVersDistintaRig = (DocMagVersDistintaRigaPrm) creaDocMagBaseRiga("DocMagVersDistintaRigaPrm", testata, riga);
-					if(docVersDistintaRig != null) {
-						testata.getRighe().add(docVersDistintaRig);
+					BigDecimal qta = null;
+					if(riga.has("QtaMqFatturabili") && riga.has("QtaMqProdotti")) {
+
+						qta = riga.getBigDecimal("QtaMqFatturabili");
+						DocMagVersDistintaRigaPrm rigaQtaFatturabile = (DocMagVersDistintaRigaPrm) creaDocMagBaseRiga("DocMagVersDistintaRigaPrm", testata, riga, qta, YCauRigDocPrdStrutture.FATTURABILI);
+						if(rigaQtaFatturabile != null) {
+							testata.getRighe().add(rigaQtaFatturabile);
+						}
+
+						qta = riga.getBigDecimal("QtaMqProdotti");
+						DocMagVersDistintaRigaPrm rigaQtaProdotta = (DocMagVersDistintaRigaPrm) creaDocMagBaseRiga("DocMagVersDistintaRigaPrm", testata, riga, qta, YCauRigDocPrdStrutture.PRODOTTI);
+						if(rigaQtaProdotta != null) {
+							testata.getRighe().add(rigaQtaProdotta);
+						}
+
+					}else {
+						DocMagVersDistintaRigaPrm docVersDistintaRig = (DocMagVersDistintaRigaPrm) creaDocMagBaseRiga("DocMagVersDistintaRigaPrm", testata, riga, qta, YCauRigDocPrdStrutture.NON_SIGNIFICATIVO);
+						if(docVersDistintaRig != null) {
+							testata.getRighe().add(docVersDistintaRig);
+						}
 					}
 				}
 
@@ -181,7 +201,7 @@ public class YProduzioneCalandraService {
 
 		assegnaDatiDocMagPre(doc, payloadTestata);
 
-		docBODC.setBo(doc);
+		docBODC.loadAttValue(); //per caricare sui component manager i valori messi sul bo (serve per le check)
 		docBODC.setAutoCommit(false);
 		int res = docBODC.save();
 		if(res == BODataCollector.ERROR) {
@@ -191,7 +211,7 @@ public class YProduzioneCalandraService {
 	}
 
 	@SuppressWarnings("unchecked")
-	protected DocMagBaseRiga creaDocMagBaseRiga(String className, DocMagBase testata,JSONObject payload) throws PantheraApiException {
+	protected DocMagBaseRiga creaDocMagBaseRiga(String className, DocMagBase testata,JSONObject payload, BigDecimal qta, char tipoMq) throws PantheraApiException {
 		DocumentoDataCollector docBODC = (DocumentoDataCollector) createDataCollector(className);
 		DocMagBaseRiga riga = (DocMagBaseRiga) docBODC.getBo();
 
@@ -204,7 +224,7 @@ public class YProduzioneCalandraService {
 		riga.setTestata(testata);
 		riga.completaBO();
 
-		assegnaDatiDocMagBaseRigaPre(riga, testata, payload);
+		assegnaDatiDocMagBaseRigaPre(riga, testata, payload, tipoMq);
 
 		//..Leggo eventuali dati extra
 		readExtraData(docBODC, payload);
@@ -212,11 +232,15 @@ public class YProduzioneCalandraService {
 		//..In questo modo carico sul bo i dati messi nei component manager sopra
 		docBODC.setOnBORecursive();
 
+		if(qta != null) {
+			riga.setQtaInUMPrm(qta);
+		}
+		
 		assegnaDatiDocMagBaseRigaPost(riga, testata, payload);
 
 		riga.setStatoAvanzamento(testata.getStatoAvanzamento());
 
-		docBODC.setBo(riga);
+		docBODC.loadAttValue(); //per caricare sui component manager i valori messi sul bo (serve per le check)
 		int res = docBODC.check();
 		if(res == BODataCollector.ERROR) {
 			throw new PantheraApiException(Status.INTERNAL_SERVER_ERROR, docBODC.getErrorList().getErrors());
@@ -246,11 +270,21 @@ public class YProduzioneCalandraService {
 		}
 	}
 
-	public void assegnaDatiDocMagBaseRigaPre(DocMagBaseRiga riga, DocMagBase testata, JSONObject payload) {
+	public void assegnaDatiDocMagBaseRigaPre(DocMagBaseRiga riga, DocMagBase testata, JSONObject payload, char tipoMq) {
 		if(riga instanceof DocMagGenericoRiga) {
 
 		}else if(riga instanceof DocMagVersDistintaRigaPrm) {
-			riga.setCausaleRiga(trovaCausaleRigaVersamento(riga.getArticolo(), ((String) payload.get("TipoMq")).charAt(0)));
+			//..Con elementWithKey perche' non lo ho ancora sull'oggetto in questo metodo
+			Articolo articolo;
+			try {
+				articolo = (Articolo) Articolo.elementWithKey(Articolo.class, KeyHelper.buildObjectKey(new String[] {
+						Azienda.getAziendaCorrente(), (String) payload.get("IdArticolo")
+				}), PersistentObject.NO_LOCK);
+				if(articolo != null)
+					riga.setCausaleRiga(trovaCausaleRigaVersamento(articolo, tipoMq));
+			} catch (JSONException | SQLException e) {
+				e.printStackTrace(Trace.excStream);
+			}
 		}
 	}
 
@@ -297,7 +331,7 @@ public class YProduzioneCalandraService {
 			try {
 				causali = YCauRigDocPrdStrutture.retrieveList(YCauRigDocPrdStrutture.class, where, "", false);
 				if(causali.size() > 0) {
-					causale = (CausaleRigaDocVersDist) causali.get(0);
+					causale = ((YCauRigDocPrdStrutture) causali.get(0)).getCausalerigadocvrsdist();
 				}
 			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | SQLException e) {
 				e.printStackTrace(Trace.excStream);
